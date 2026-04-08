@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./vecchio
+      dockerfile: Dockerfile.api
+    ports:
+      - "6900:6900"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6900/api/v1/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:6900
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  worker:
+    build: ./worker
+    env_file: .env
+    environment:
+      - WORKER_ENABLED=false
+      - OPENBB_API_URL=http://backend:6900
+    depends_on:
+      - backend
+    restart: "no"

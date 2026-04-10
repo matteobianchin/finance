@@ -3,10 +3,13 @@
 import { useState, useEffect, use, useMemo } from "react";
 import PriceChart from "@/components/charts/PriceChart";
 import type { EmaLine } from "@/components/charts/PriceChart";
+import CandlestickChart from "@/components/charts/CandlestickChart";
+import ComparisonChart from "@/components/charts/ComparisonChart";
 import SignalsPanel from "@/components/equity/SignalsPanel";
 import FundamentalsTable from "@/components/equity/FundamentalsTable";
 import NewsFeed from "@/components/equity/NewsFeed";
 import AIAnalysisButton from "@/components/equity/AIAnalysisButton";
+import { useWatchlist } from "@/components/overview/WatchlistManager";
 import { getPriceHistory, getIncomeStatement, getNews, getQuote } from "@/lib/openbb";
 import { EMA } from "technicalindicators";
 import type { PriceBar, IncomeStatement, NewsArticle, Quote, Timeframe } from "@/types/openbb";
@@ -16,7 +19,6 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
   const symbol = ticker.toUpperCase();
 
   const [timeframe, setTimeframe] = useState<Timeframe>("1M");
-  const [activeTab, setActiveTab] = useState<"indicatori" | "fondamentali" | "news">("indicatori");
   const [history, setHistory] = useState<PriceBar[]>([]);
   const [fundamentals, setFundamentals] = useState<IncomeStatement[]>([]);
   const [news, setNews] = useState<NewsArticle[]>([]);
@@ -24,6 +26,12 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
   const [chartLoading, setChartLoading] = useState(true);
   const [tabLoading, setTabLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { tickers: watchlist } = useWatchlist();
+  const [chartMode, setChartMode] = useState<"line" | "candle">("line");
+  const [activeTab, setActiveTab] = useState<"indicatori" | "fondamentali" | "news" | "confronto">(() => {
+    if (typeof window === "undefined") return "indicatori";
+    return (localStorage.getItem("equity_active_tab") as "indicatori" | "fondamentali" | "news" | "confronto") ?? "indicatori";
+  });
   const [emaState, setEmaState] = useState<Record<number, boolean>>({
     9: false, 21: false, 50: false, 200: false,
   });
@@ -112,24 +120,53 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
           <div className="h-64 bg-border rounded" />
         </div>
       ) : (
-        <PriceChart
-          data={history}
-          timeframe={timeframe}
-          onTimeframeChange={(tf) => setTimeframe(tf)}
-          loading={chartLoading}
-          emaLines={emaLines}
-          onToggleEma={(period) =>
-            setEmaState((prev) => ({ ...prev, [period]: !prev[period] }))
-          }
-        />
+        <div>
+          <div className="flex justify-end gap-1 mb-2">
+            {(["line", "candle"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setChartMode(mode)}
+                className={`px-3 py-1 rounded text-xs transition-colors ${
+                  chartMode === mode
+                    ? "bg-accent text-white"
+                    : "text-muted hover:text-white bg-card border border-border"
+                }`}
+              >
+                {mode === "line" ? "Linea" : "Candele"}
+              </button>
+            ))}
+          </div>
+          {chartMode === "line" ? (
+            <PriceChart
+              data={history}
+              timeframe={timeframe}
+              onTimeframeChange={(tf) => setTimeframe(tf)}
+              loading={chartLoading}
+              emaLines={emaLines}
+              onToggleEma={(period) =>
+                setEmaState((prev) => ({ ...prev, [period]: !prev[period] }))
+              }
+            />
+          ) : (
+            <CandlestickChart
+              data={history}
+              timeframe={timeframe}
+              onTimeframeChange={(tf) => setTimeframe(tf)}
+              loading={chartLoading}
+            />
+          )}
+        </div>
       )}
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border pb-0">
-        {(["indicatori", "fondamentali", "news"] as const).map((tab) => (
+        {(["indicatori", "fondamentali", "news", "confronto"] as const).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => {
+              localStorage.setItem("equity_active_tab", tab);
+              setActiveTab(tab);
+            }}
             className={`px-4 py-2 text-sm capitalize transition-colors border-b-2 -mb-px ${
               activeTab === tab
                 ? "border-accent text-white font-medium"
@@ -149,6 +186,12 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
           <SignalsPanel data={history} />
         ) : activeTab === "fondamentali" ? (
           <FundamentalsTable data={fundamentals} />
+        ) : activeTab === "confronto" ? (
+          <ComparisonChart
+            primaryTicker={symbol}
+            watchlist={watchlist}
+            timeframe={timeframe}
+          />
         ) : (
           <NewsFeed articles={news} />
         )}

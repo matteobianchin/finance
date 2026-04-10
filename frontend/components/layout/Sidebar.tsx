@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart2, TrendingUp, Globe, Briefcase, LayoutDashboard, Search } from "lucide-react";
+import { BarChart2, TrendingUp, Globe, Briefcase, LayoutDashboard, Search, FlaskConical, Filter, Calendar } from "lucide-react";
 import { clsx } from "clsx";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
+import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut";
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -12,12 +13,18 @@ const NAV = [
   { href: "/crypto", label: "Crypto", icon: BarChart2 },
   { href: "/macro", label: "Macro", icon: Globe },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
+  { href: "/analisi", label: "Analisi", icon: FlaskConical },
+  { href: "/screener", label: "Screener", icon: Filter },
+  { href: "/earnings", label: "Earnings", icon: Calendar },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const focusSearch = useCallback(() => searchRef.current?.focus(), []);
+  useKeyboardShortcut("/", focusSearch);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -57,9 +64,10 @@ export default function Sidebar() {
         <form onSubmit={handleSearch} className="relative">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
           <input
+            ref={searchRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cerca ticker…"
+            placeholder="Cerca ticker… (/)"
             className="w-full bg-surface border border-border rounded-lg pl-7 pr-3 py-1.5 text-xs text-white placeholder:text-muted outline-none focus:border-accent"
           />
         </form>

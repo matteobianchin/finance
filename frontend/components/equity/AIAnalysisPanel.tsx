@@ -5,16 +5,9 @@ import { BrainCircuit, X, Loader2 } from "lucide-react";
 
 interface Props {
   ticker: string;
-  price: number;
-  change: number;
-  rsi?: number;
-  macd?: number;
-  atrVal?: number;
 }
 
-export default function AIAnalysisPanel({
-  ticker, price, change, rsi, macd, atrVal,
-}: Props) {
+export default function AIAnalysisPanel({ ticker }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState("");
@@ -30,14 +23,7 @@ export default function AIAnalysisPanel({
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ticker,
-          price: price.toFixed(2),
-          change: change.toFixed(2),
-          rsi,
-          macd,
-          atrVal,
-        }),
+        body: JSON.stringify({ ticker }),
       });
 
       if (!res.ok) {

@@ -100,11 +100,7 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
             </div>
           )}
         </div>
-        <AIAnalysisPanel
-          ticker={symbol}
-          price={quote?.price ?? 0}
-          change={quote?.day_change_percent ?? 0}
-        />
+        <AIAnalysisPanel ticker={symbol} />
       </div>
 
       {error && (

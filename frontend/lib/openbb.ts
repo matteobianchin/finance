@@ -20,6 +20,7 @@ const TIMEFRAME_PARAMS: Record<string, { start_date: string; interval?: string }
   "1D": { start_date: daysAgo(2), interval: "5m" },
   "1W": { start_date: daysAgo(7) },
   "1M": { start_date: daysAgo(30) },
+  "3M": { start_date: daysAgo(90) },
   "6M": { start_date: daysAgo(180) },
   "1Y": { start_date: daysAgo(365) },
   "5Y": { start_date: daysAgo(1825) },

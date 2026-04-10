@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { BarChart2, TrendingUp, Globe, Briefcase, LayoutDashboard } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { BarChart2, TrendingUp, Globe, Briefcase, LayoutDashboard, Search } from "lucide-react";
 import { clsx } from "clsx";
+import { useState } from "react";
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -15,6 +16,17 @@ const NAV = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [search, setSearch] = useState("");
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const ticker = search.trim().toUpperCase();
+    if (ticker) {
+      setSearch("");
+      router.push(`/equity/${ticker}`);
+    }
+  }
 
   return (
     <aside className="w-56 min-h-screen bg-card border-r border-border flex flex-col p-4 gap-1">
@@ -40,6 +52,18 @@ export default function Sidebar() {
           </Link>
         );
       })}
+
+      <div className="mt-auto pt-4 border-t border-border">
+        <form onSubmit={handleSearch} className="relative">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cerca ticker…"
+            className="w-full bg-surface border border-border rounded-lg pl-7 pr-3 py-1.5 text-xs text-white placeholder:text-muted outline-none focus:border-accent"
+          />
+        </form>
+      </div>
     </aside>
   );
 }

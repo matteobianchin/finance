@@ -26,7 +26,16 @@ export default function CryptoPage() {
         </div>
       )}
       {loading ? (
-        <p className="text-muted text-sm">Caricamento...</p>
+        <div className="bg-card border border-border rounded-xl overflow-hidden animate-pulse">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 p-4 border-b border-border/50">
+              <div className="h-4 w-4 bg-border rounded" />
+              <div className="h-4 w-16 bg-border rounded" />
+              <div className="ml-auto h-4 w-20 bg-border rounded" />
+              <div className="h-4 w-14 bg-border rounded" />
+            </div>
+          ))}
+        </div>
       ) : (
         <CryptoTable data={data} />
       )}

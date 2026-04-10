@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import type { PriceBar } from "@/types/openbb";
 
-const TIMEFRAMES = ["1D", "1W", "1M", "6M", "1Y", "5Y"] as const;
+const TIMEFRAMES = ["1D", "1W", "1M", "3M", "6M", "1Y", "5Y"] as const;
 type Timeframe = (typeof TIMEFRAMES)[number];
 
 interface Props {

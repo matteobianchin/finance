@@ -9,7 +9,7 @@ import AIAnalysisButton from "@/components/equity/AIAnalysisButton";
 import { getPriceHistory, getIncomeStatement, getNews, getQuote } from "@/lib/openbb";
 import type { PriceBar, IncomeStatement, NewsArticle, Quote } from "@/types/openbb";
 
-type Timeframe = "1D" | "1W" | "1M" | "6M" | "1Y" | "5Y";
+type Timeframe = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "5Y";
 
 export default function EquityPage({ params }: { params: Promise<{ ticker: string }> }) {
   const { ticker } = use(params);
@@ -80,12 +80,23 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
       )}
 
       {/* Grafico prezzi */}
-      <PriceChart
-        data={history}
-        timeframe={timeframe}
-        onTimeframeChange={(tf) => setTimeframe(tf)}
-        loading={chartLoading}
-      />
+      {chartLoading && !history.length ? (
+        <div className="bg-card border border-border rounded-xl p-4 animate-pulse">
+          <div className="flex gap-1 mb-4">
+            {["1D","1W","1M","3M","6M","1Y","5Y"].map((tf) => (
+              <div key={tf} className="h-6 w-8 bg-border rounded" />
+            ))}
+          </div>
+          <div className="h-64 bg-border rounded" />
+        </div>
+      ) : (
+        <PriceChart
+          data={history}
+          timeframe={timeframe as "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "5Y"}
+          onTimeframeChange={(tf) => setTimeframe(tf)}
+          loading={chartLoading}
+        />
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border pb-0">

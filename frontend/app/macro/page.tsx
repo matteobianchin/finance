@@ -38,7 +38,14 @@ export default function MacroPage() {
     <div className="space-y-4 max-w-4xl">
       <h1 className="text-2xl font-bold text-white">Macro</h1>
       {loading ? (
-        <p className="text-muted text-sm">Caricamento serie FRED...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="bg-card border border-border rounded-xl p-4 animate-pulse">
+              <div className="h-4 w-32 bg-border rounded mb-4" />
+              <div className="h-44 bg-border rounded" />
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {SERIES.map(({ symbol, label, unit, color }) => (

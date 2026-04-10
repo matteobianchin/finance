@@ -7,9 +7,7 @@ import FundamentalsTable from "@/components/equity/FundamentalsTable";
 import NewsFeed from "@/components/equity/NewsFeed";
 import AIAnalysisButton from "@/components/equity/AIAnalysisButton";
 import { getPriceHistory, getIncomeStatement, getNews, getQuote } from "@/lib/openbb";
-import type { PriceBar, IncomeStatement, NewsArticle, Quote } from "@/types/openbb";
-
-type Timeframe = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "5Y";
+import type { PriceBar, IncomeStatement, NewsArticle, Quote, Timeframe } from "@/types/openbb";
 
 export default function EquityPage({ params }: { params: Promise<{ ticker: string }> }) {
   const { ticker } = use(params);
@@ -92,7 +90,7 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
       ) : (
         <PriceChart
           data={history}
-          timeframe={timeframe as "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "5Y"}
+          timeframe={timeframe}
           onTimeframeChange={(tf) => setTimeframe(tf)}
           loading={chartLoading}
         />

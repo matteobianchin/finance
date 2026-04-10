@@ -42,11 +42,40 @@ export function parseCSV(csvText: string): ParseResult {
   return { rows: errors.length === 0 ? rows : [], errors };
 }
 
+/**
+ * Aggrega righe con lo stesso ticker usando prezzo medio ponderato.
+ * Es: 10 AAPL a $150 + 5 AAPL a $180 → 15 AAPL a $160 (weighted avg).
+ */
+function aggregateRows(rows: PortfolioRow[]): PortfolioRow[] {
+  const map = new Map<string, { quantity: number; totalCost: number; buy_date: string }>();
+
+  rows.forEach((row) => {
+    const existing = map.get(row.ticker);
+    if (existing) {
+      existing.totalCost += row.quantity * row.buy_price;
+      existing.quantity += row.quantity;
+    } else {
+      map.set(row.ticker, {
+        quantity: row.quantity,
+        totalCost: row.quantity * row.buy_price,
+        buy_date: row.buy_date,
+      });
+    }
+  });
+
+  return Array.from(map.entries()).map(([ticker, { quantity, totalCost, buy_date }]) => ({
+    ticker,
+    quantity,
+    buy_price: totalCost / quantity,
+    buy_date,
+  }));
+}
+
 export function calcPositions(
   rows: PortfolioRow[],
   prices: Record<string, number>
 ): PortfolioPosition[] {
-  return rows
+  return aggregateRows(rows)
     .filter((row) => prices[row.ticker] !== undefined)
     .map((row) => {
       const current_price = prices[row.ticker];

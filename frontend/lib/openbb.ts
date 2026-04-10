@@ -117,10 +117,21 @@ export async function getFredSeries(
   });
 }
 
+export async function getCryptoQuote(symbol: string): Promise<Quote> {
+  // yfinance supporta i simboli crypto via endpoint equity/price/quote (es. BTC-USD)
+  // Fallback: usa lo stesso endpoint equity che funziona con yfinance per crypto
+  const results = await obbFetch<Quote>("equity/price/quote", {
+    symbol,
+    provider: "yfinance",
+  });
+  if (!results[0]) throw new Error(`No quote for ${symbol}`);
+  return results[0];
+}
+
 export async function getCryptoTop10(): Promise<Quote[]> {
   const symbols = ["BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD",
                    "ADA-USD", "AVAX-USD", "DOGE-USD", "DOT-USD", "MATIC-USD"];
-  const results = await Promise.allSettled(symbols.map((s) => getQuote(s)));
+  const results = await Promise.allSettled(symbols.map((s) => getCryptoQuote(s)));
   return results
     .filter((r): r is PromiseFulfilledResult<Quote> => r.status === "fulfilled")
     .map((r) => r.value);

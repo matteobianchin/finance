@@ -4,10 +4,9 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from "recharts";
-import type { PriceBar } from "@/types/openbb";
+import type { PriceBar, Timeframe } from "@/types/openbb";
 
-const TIMEFRAMES = ["1D", "1W", "1M", "3M", "6M", "1Y", "5Y"] as const;
-type Timeframe = (typeof TIMEFRAMES)[number];
+const TIMEFRAMES: Timeframe[] = ["1D", "1W", "1M", "3M", "6M", "1Y", "5Y"];
 
 interface Props {
   data: PriceBar[];

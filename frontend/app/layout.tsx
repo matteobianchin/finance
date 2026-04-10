@@ -3,7 +3,7 @@ import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 
 export const metadata: Metadata = {
-  title: "OpenBB Dashboard",
+  title: "Overview | OpenBB",
   description: "Dashboard finanziaria personale",
 };
 

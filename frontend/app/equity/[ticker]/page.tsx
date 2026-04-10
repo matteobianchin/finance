@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useMemo } from "react";
 import PriceChart from "@/components/charts/PriceChart";
+import type { EmaLine } from "@/components/charts/PriceChart";
 import SignalsPanel from "@/components/equity/SignalsPanel";
 import FundamentalsTable from "@/components/equity/FundamentalsTable";
 import NewsFeed from "@/components/equity/NewsFeed";
 import AIAnalysisButton from "@/components/equity/AIAnalysisButton";
 import { getPriceHistory, getIncomeStatement, getNews, getQuote } from "@/lib/openbb";
+import { EMA } from "technicalindicators";
 import type { PriceBar, IncomeStatement, NewsArticle, Quote, Timeframe } from "@/types/openbb";
 
 export default function EquityPage({ params }: { params: Promise<{ ticker: string }> }) {
@@ -22,6 +24,28 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
   const [chartLoading, setChartLoading] = useState(true);
   const [tabLoading, setTabLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emaState, setEmaState] = useState<Record<number, boolean>>({
+    9: false, 21: false, 50: false, 200: false,
+  });
+
+  const emaLines: EmaLine[] = useMemo(() => {
+    if (history.length === 0) return [];
+    const closes = history.map((b) => b.close);
+    return [
+      { period: 9, color: "#f59e0b" },
+      { period: 21, color: "#a78bfa" },
+      { period: 50, color: "#3b82f6" },
+      { period: 200, color: "#6b7280" },
+    ].map((cfg) => {
+      const enabled = emaState[cfg.period] ?? false;
+      if (closes.length < cfg.period) {
+        return { ...cfg, enabled, values: closes.map(() => NaN) };
+      }
+      const raw = EMA.calculate({ values: closes, period: cfg.period });
+      const padded = Array(closes.length - raw.length).fill(NaN).concat(raw) as number[];
+      return { ...cfg, enabled, values: padded };
+    });
+  }, [history, emaState]);
 
   useEffect(() => {
     setChartLoading(true);
@@ -93,6 +117,10 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
           timeframe={timeframe}
           onTimeframeChange={(tf) => setTimeframe(tf)}
           loading={chartLoading}
+          emaLines={emaLines}
+          onToggleEma={(period) =>
+            setEmaState((prev) => ({ ...prev, [period]: !prev[period] }))
+          }
         />
       )}
 

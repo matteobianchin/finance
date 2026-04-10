@@ -1,1 +1,5 @@
 .env
+.claude/
+.superpowers/
+superpowers/
+frontend/next-env.d.ts

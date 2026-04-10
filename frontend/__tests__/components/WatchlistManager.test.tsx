@@ -1,8 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useWatchlist } from "@/components/overview/WatchlistManager";
+import { WatchlistProvider, useWatchlist } from "@/components/providers/WatchlistProvider";
 
 const STORAGE_KEY = "openbb_watchlist";
+
+// Wrap every renderHook call with WatchlistProvider (hook requires context)
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <WatchlistProvider>{children}</WatchlistProvider>
+);
 
 beforeEach(() => {
   localStorage.clear();
@@ -10,18 +15,18 @@ beforeEach(() => {
 
 describe("useWatchlist", () => {
   it("returns default watchlist when localStorage is empty", () => {
-    const { result } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist(), { wrapper });
     expect(result.current.tickers).toEqual(["AAPL", "MSFT", "NVDA", "GOOGL"]);
   });
 
   it("loads persisted watchlist from localStorage", () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(["TSLA", "AMZN"]));
-    const { result } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist(), { wrapper });
     expect(result.current.tickers).toEqual(["TSLA", "AMZN"]);
   });
 
   it("add() appends a new ticker and persists to localStorage", () => {
-    const { result } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist(), { wrapper });
 
     act(() => {
       result.current.add("TSLA");
@@ -32,7 +37,7 @@ describe("useWatchlist", () => {
   });
 
   it("add() normalizes ticker to uppercase", () => {
-    const { result } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist(), { wrapper });
 
     act(() => {
       result.current.add("tsla");
@@ -43,18 +48,18 @@ describe("useWatchlist", () => {
   });
 
   it("add() does not add duplicate tickers", () => {
-    const { result } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist(), { wrapper });
 
     act(() => {
       result.current.add("AAPL"); // già nel default
     });
 
-    const count = result.current.tickers.filter((t) => t === "AAPL").length;
+    const count = result.current.tickers.filter((t: string) => t === "AAPL").length;
     expect(count).toBe(1);
   });
 
   it("add() ignores empty string", () => {
-    const { result } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist(), { wrapper });
     const initialLength = result.current.tickers.length;
 
     act(() => {
@@ -65,7 +70,7 @@ describe("useWatchlist", () => {
   });
 
   it("remove() elimina un ticker e persiste", () => {
-    const { result } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist(), { wrapper });
 
     act(() => {
       result.current.remove("AAPL");
@@ -76,7 +81,7 @@ describe("useWatchlist", () => {
   });
 
   it("remove() su ticker inesistente non causa errori", () => {
-    const { result } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist(), { wrapper });
     const initialLength = result.current.tickers.length;
 
     act(() => {

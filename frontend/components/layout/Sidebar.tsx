@@ -2,19 +2,18 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart2, TrendingUp, Globe, Briefcase, LayoutDashboard, Search, FlaskConical, Filter, Calendar } from "lucide-react";
+import { BarChart2, Globe, Briefcase, LayoutDashboard, Search, FlaskConical, Filter, Calendar } from "lucide-react";
 import { clsx } from "clsx";
 import { useState, useRef, useCallback } from "react";
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut";
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
-  { href: "/equity/AAPL", label: "Azioni", icon: TrendingUp },
+  { href: "/screener", label: "Screener", icon: Filter },
+  { href: "/analisi", label: "Analisi", icon: FlaskConical },
   { href: "/crypto", label: "Crypto", icon: BarChart2 },
   { href: "/macro", label: "Macro", icon: Globe },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
-  { href: "/analisi", label: "Analisi", icon: FlaskConical },
-  { href: "/screener", label: "Screener", icon: Filter },
   { href: "/earnings", label: "Earnings", icon: Calendar },
 ];
 

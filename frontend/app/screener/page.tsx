@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { getPriceHistory, getQuote } from "@/lib/openbb";
 import { RSI } from "technicalindicators";
 import { filterRows, sortRows } from "@/lib/screener";
-import { useWatchlist } from "@/components/overview/WatchlistManager";
+import { useWatchlist } from "@/components/providers/WatchlistProvider";
 import type { ScreenerRow, SortKey, SortDir } from "@/lib/screener";
 
 const BASE_UNIVERSE = [

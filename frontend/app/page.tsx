@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { TrendingUp } from "lucide-react";
-import { useWatchlist } from "@/components/overview/WatchlistManager";
+import { useWatchlist } from "@/components/providers/WatchlistProvider";
 import WatchlistCard from "@/components/overview/WatchlistCard";
-import WatchlistManagerForm from "@/components/overview/WatchlistManager";
+import WatchlistManager from "@/components/overview/WatchlistManager";
 import MacroWidget from "@/components/overview/MacroWidget";
 import { getQuote, getPriceHistory, getFredSeries } from "@/lib/openbb";
 import type { Quote, PriceBar, FredSeries } from "@/types/openbb";
@@ -43,7 +43,7 @@ function WatchlistCardSkeleton() {
 }
 
 export default function OverviewPage() {
-  const { tickers, add, remove } = useWatchlist();
+  const { tickers, remove } = useWatchlist();
   const [entries, setEntries] = useState<Record<string, WatchlistEntry>>({});
   const [macroData, setMacroData] = useState<{
     fed: FredSeries[];
@@ -98,7 +98,7 @@ export default function OverviewPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-white">Overview</h1>
-        <WatchlistManagerForm onAdd={add} />
+        <WatchlistManager />
       </div>
 
       {/* Macro widgets */}

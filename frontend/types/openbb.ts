@@ -96,6 +96,16 @@ export interface PortfolioPosition extends PortfolioRow {
   gain_loss_pct: number;
 }
 
+// Earnings calendar
+export interface EarningsEvent {
+  symbol: string;
+  date: string;
+  eps_estimate?: number;
+  eps_actual?: number;
+  revenue_estimate?: number;
+  revenue_actual?: number;
+}
+
 // Errore generico
 export interface ApiError {
   message: string;

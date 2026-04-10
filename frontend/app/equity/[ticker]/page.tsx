@@ -9,7 +9,7 @@ import SignalsPanel from "@/components/equity/SignalsPanel";
 import FundamentalsTable from "@/components/equity/FundamentalsTable";
 import NewsFeed from "@/components/equity/NewsFeed";
 import AIAnalysisPanel from "@/components/equity/AIAnalysisPanel";
-import { useWatchlist } from "@/components/overview/WatchlistManager";
+import { useWatchlist } from "@/components/providers/WatchlistProvider";
 import { getPriceHistory, getIncomeStatement, getNews, getQuote } from "@/lib/openbb";
 import { EMA } from "technicalindicators";
 import type { PriceBar, IncomeStatement, NewsArticle, Quote, Timeframe } from "@/types/openbb";

@@ -1,49 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useWatchlist } from "@/components/providers/WatchlistProvider";
 
-const DEFAULT_WATCHLIST = ["AAPL", "MSFT", "NVDA", "GOOGL"];
-const STORAGE_KEY = "openbb_watchlist";
-
-export function useWatchlist() {
-  const [tickers, setTickers] = useState<string[]>(() => {
-    if (typeof window === "undefined") return DEFAULT_WATCHLIST;
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : DEFAULT_WATCHLIST;
-    } catch {
-      return DEFAULT_WATCHLIST;
-    }
-  });
-
-  function add(symbol: string) {
-    const upper = symbol.toUpperCase().trim();
-    if (!upper || tickers.includes(upper)) return;
-    const next = [...tickers, upper];
-    setTickers(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }
-
-  function remove(symbol: string) {
-    const next = tickers.filter((t) => t !== symbol);
-    setTickers(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }
-
-  return { tickers, add, remove };
-}
-
-interface Props {
-  onAdd: (symbol: string) => void;
-}
-
-export default function WatchlistManager({ onAdd }: Props) {
+export default function WatchlistManager() {
+  const { add } = useWatchlist();
   const [input, setInput] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (input.trim()) {
-      onAdd(input.trim().toUpperCase());
+    const ticker = input.trim().toUpperCase();
+    if (ticker) {
+      add(ticker);
       setInput("");
     }
   }

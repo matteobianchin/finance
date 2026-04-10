@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { getEarningsCalendar } from "@/lib/openbb";
-import { useWatchlist } from "@/components/overview/WatchlistManager";
-import type { EarningsEvent } from "@/lib/openbb";
+import { useWatchlist } from "@/components/providers/WatchlistProvider";
+import type { EarningsEvent } from "@/types/openbb";
 
 export default function EarningsPage() {
   const { tickers } = useWatchlist();

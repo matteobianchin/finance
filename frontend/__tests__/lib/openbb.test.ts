@@ -21,7 +21,9 @@ function mockOBBResponse<T>(results: T[]) {
 
 beforeEach(() => {
   mockFetch.mockReset();
-  process.env.NEXT_PUBLIC_API_URL = "http://localhost:6900";
+  // In jsdom, window.location.origin is "http://localhost:3000"
+  // getBase() client-side returns window.location.origin + "/api/openbb"
+  // Tests only check that fetch is called with a URL containing the path segment
 });
 
 describe("getPriceHistory", () => {

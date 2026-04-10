@@ -9,7 +9,7 @@ import {
   maxDrawdown,
   beta,
 } from "@/lib/quant";
-import { useWatchlist } from "@/components/overview/WatchlistManager";
+import { useWatchlist } from "@/components/providers/WatchlistProvider";
 import QuantStatsCard from "@/components/analisi/QuantStatsCard";
 import ReturnsHistogram from "@/components/analisi/ReturnsHistogram";
 import VolatilityChart from "@/components/analisi/VolatilityChart";

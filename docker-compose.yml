@@ -18,7 +18,12 @@ services:
     ports:
       - "3000:3000"
     environment:
+      # Used by next.config.mjs rewrite (server startup) — keeps backend URL out of browser bundle
       - NEXT_PUBLIC_API_URL=http://backend:6900
+      # Used by Next.js Route Handlers (server-side direct calls, e.g. /api/analyze)
+      - OPENBB_INTERNAL_URL=http://backend:6900
+      # Required for AI analysis — set in .env or pass here
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     depends_on:
       backend:
         condition: service_healthy

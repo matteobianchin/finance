@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { RSI, MACD, BollingerBands } from "technicalindicators";
+import {
+  RSI, MACD, BollingerBands,
+  ATR, Stochastic, ADX, OBV, WilliamsR,
+} from "technicalindicators";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine,
@@ -25,7 +28,11 @@ function interpretMacd(hist: number): { label: string; color: string } {
   return { label: "Neutrale", color: "text-muted" };
 }
 
-function interpretBB(price: number, upper: number, lower: number): { label: string; color: string } {
+function interpretBB(
+  price: number,
+  upper: number,
+  lower: number
+): { label: string; color: string } {
   if (price >= upper) return { label: "Sopra banda sup.", color: "text-negative" };
   if (price <= lower) return { label: "Sotto banda inf.", color: "text-positive" };
   return { label: "Dentro le bande", color: "text-muted" };
@@ -33,8 +40,13 @@ function interpretBB(price: number, upper: number, lower: number): { label: stri
 
 export default function SignalsPanel({ data }: Props) {
   const closes = data.map((d) => d.close);
+  const highs = data.map((d) => d.high);
+  const lows = data.map((d) => d.low);
+  const volumes = data.map((d) => d.volume ?? 0);
   const dates = data.map((d) => d.date.slice(0, 10));
+
   const closesKey = closes.join(",");
+  const hlKey = highs.join(",");
 
   const rsiValues = useMemo(() => {
     if (closes.length < 14) return [];
@@ -45,31 +57,80 @@ export default function SignalsPanel({ data }: Props) {
     if (closes.length < 26) return [];
     return MACD.calculate({
       values: closes,
-      fastPeriod: 12,
-      slowPeriod: 26,
-      signalPeriod: 9,
-      SimpleMAOscillator: false,
-      SimpleMASignal: false,
+      fastPeriod: 12, slowPeriod: 26, signalPeriod: 9,
+      SimpleMAOscillator: false, SimpleMASignal: false,
     });
   }, [closesKey]);
 
   const bbValues = useMemo(() => {
     if (closes.length < 20) return [];
-    return BollingerBands.calculate({
-      values: closes,
-      period: 20,
-      stdDev: 2,
-    });
+    return BollingerBands.calculate({ values: closes, period: 20, stdDev: 2 });
   }, [closesKey]);
 
-  const rsiData = rsiValues.map((v, i) => ({
-    date: dates[dates.length - rsiValues.length + i],
-    value: v,
+  const atrValues = useMemo(() => {
+    if (data.length < 14) return [];
+    return ATR.calculate({ high: highs, low: lows, close: closes, period: 14 });
+  }, [hlKey]);
+
+  const stochValues = useMemo(() => {
+    if (data.length < 14) return [];
+    return Stochastic.calculate({
+      high: highs, low: lows, close: closes,
+      period: 14, signalPeriod: 3,
+    });
+  }, [hlKey]);
+
+  const adxValues = useMemo(() => {
+    if (data.length < 14) return [];
+    return ADX.calculate({ high: highs, low: lows, close: closes, period: 14 });
+  }, [hlKey]);
+
+  const obvValues = useMemo(() => {
+    if (data.length < 2) return [];
+    return OBV.calculate({ close: closes, volume: volumes });
+  }, [closesKey]);
+
+  const wrValues = useMemo(() => {
+    if (data.length < 14) return [];
+    return WilliamsR.calculate({ high: highs, low: lows, close: closes, period: 14 });
+  }, [hlKey]);
+
+  function align<T>(values: T[], total: number) {
+    return values.map((v, i) => ({
+      date: dates[total - values.length + i] ?? "",
+      value: v,
+    }));
+  }
+
+  const rsiData = align(rsiValues, dates.length).map(({ date, value }) => ({
+    date,
+    value: value as number,
+  }));
+  const macdHistData = align(macdValues, dates.length).map(({ date, value }) => ({
+    date,
+    value: (value as { histogram?: number }).histogram ?? 0,
+  }));
+  const atrData = align(atrValues, dates.length).map(({ date, value }) => ({
+    date,
+    value: value as number,
+  }));
+  const adxData = align(adxValues, dates.length).map(({ date, value }) => ({
+    date,
+    value: (value as { adx: number }).adx,
+  }));
+  const obvData = align(obvValues, dates.length).map(({ date, value }) => ({
+    date,
+    value: value as number,
+  }));
+  const wrData = align(wrValues, dates.length).map(({ date, value }) => ({
+    date,
+    value: value as number,
   }));
 
-  const macdHistData = macdValues.map((v, i) => ({
-    date: dates[dates.length - macdValues.length + i],
-    value: v.histogram ?? 0,
+  const stochChartData = stochValues.map((v, i) => ({
+    date: dates[dates.length - stochValues.length + i] ?? "",
+    k: v.k,
+    d: v.d,
   }));
 
   const bbChartData = bbValues.map((v, i) => ({
@@ -84,6 +145,8 @@ export default function SignalsPanel({ data }: Props) {
   const lastMacdHist = macdValues.at(-1)?.histogram ?? 0;
   const lastBB = bbValues.at(-1);
   const lastPrice = closes.at(-1) ?? 0;
+  const lastAtr = atrValues.at(-1);
+  const lastStoch = stochValues.at(-1);
 
   const rsiSignal = lastRsi !== undefined ? interpretRsi(lastRsi) : null;
   const macdSignal = interpretMacd(lastMacdHist);
@@ -92,11 +155,13 @@ export default function SignalsPanel({ data }: Props) {
   return (
     <div className="space-y-4">
       {/* Riepilogo segnali */}
-      <div className="bg-card border border-border rounded-xl p-4 grid grid-cols-3 gap-4">
+      <div className="bg-card border border-border rounded-xl p-4 grid grid-cols-5 gap-4">
         <div>
           <span className="text-muted text-xs uppercase">RSI (14)</span>
           <p className="text-white font-semibold">{lastRsi?.toFixed(1) ?? "—"}</p>
-          {rsiSignal && <p className={`text-sm ${rsiSignal.color}`}>{rsiSignal.label}</p>}
+          {rsiSignal && (
+            <p className={`text-sm ${rsiSignal.color}`}>{rsiSignal.label}</p>
+          )}
         </div>
         <div>
           <span className="text-muted text-xs uppercase">MACD</span>
@@ -105,8 +170,42 @@ export default function SignalsPanel({ data }: Props) {
         </div>
         <div>
           <span className="text-muted text-xs uppercase">Bollinger (20)</span>
-          <p className="text-white font-semibold">{lastBB ? `$${lastBB.upper.toFixed(1)}` : "—"}</p>
-          {bbSignal && <p className={`text-sm ${bbSignal.color}`}>{bbSignal.label}</p>}
+          <p className="text-white font-semibold">
+            {lastBB ? `$${lastBB.upper.toFixed(1)}` : "—"}
+          </p>
+          {bbSignal && (
+            <p className={`text-sm ${bbSignal.color}`}>{bbSignal.label}</p>
+          )}
+        </div>
+        <div>
+          <span className="text-muted text-xs uppercase">ATR (14)</span>
+          <p className="text-white font-semibold">
+            {lastAtr ? `$${lastAtr.toFixed(2)}` : "—"}
+          </p>
+          <p className="text-muted text-sm">Volatilità</p>
+        </div>
+        <div>
+          <span className="text-muted text-xs uppercase">Stochastic K</span>
+          <p className="text-white font-semibold">
+            {lastStoch ? lastStoch.k.toFixed(1) : "—"}
+          </p>
+          {lastStoch && (
+            <p
+              className={`text-sm ${
+                lastStoch.k >= 80
+                  ? "text-negative"
+                  : lastStoch.k <= 20
+                  ? "text-positive"
+                  : "text-muted"
+              }`}
+            >
+              {lastStoch.k >= 80
+                ? "Ipercomprato"
+                : lastStoch.k <= 20
+                ? "Ipervenduto"
+                : "Neutrale"}
+            </p>
+          )}
         </div>
       </div>
 
@@ -131,20 +230,34 @@ export default function SignalsPanel({ data }: Props) {
         />
       )}
 
-      {/* Bollinger Bands — grafico multi-linea */}
+      {/* Bollinger Bands */}
       {bbChartData.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4">
-          <span className="text-muted text-xs uppercase tracking-wide">Bollinger Bands (20, 2σ)</span>
+          <span className="text-muted text-xs uppercase tracking-wide">
+            Bollinger Bands (20, 2σ)
+          </span>
           <ResponsiveContainer width="100%" height={140}>
             <LineChart data={bbChartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a2d3a" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#6b7280" }} tickFormatter={(v) => v.slice(5)} interval="preserveStartEnd" />
-              <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} domain={["auto", "auto"]} tickFormatter={(v) => `$${v.toFixed(0)}`} />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 10, fill: "#6b7280" }}
+                tickFormatter={(v) => v.slice(5)}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                tick={{ fontSize: 10, fill: "#6b7280" }}
+                domain={["auto", "auto"]}
+                tickFormatter={(v) => `$${v.toFixed(0)}`}
+              />
               <Tooltip
-                contentStyle={{ background: "#1a1d27", border: "1px solid #2a2d3a", borderRadius: 8 }}
+                contentStyle={{
+                  background: "#1a1d27",
+                  border: "1px solid #2a2d3a",
+                  borderRadius: 8,
+                }}
                 formatter={(v: number, name: string) => [`$${v.toFixed(2)}`, name]}
               />
-              <ReferenceLine y={0} stroke="transparent" />
               <Line type="monotone" dataKey="upper" stroke="#ef4444" strokeWidth={1} dot={false} isAnimationActive={false} name="Upper" />
               <Line type="monotone" dataKey="middle" stroke="#6b7280" strokeWidth={1} strokeDasharray="4 4" dot={false} isAnimationActive={false} name="SMA20" />
               <Line type="monotone" dataKey="lower" stroke="#22c55e" strokeWidth={1} dot={false} isAnimationActive={false} name="Lower" />
@@ -152,6 +265,79 @@ export default function SignalsPanel({ data }: Props) {
             </LineChart>
           </ResponsiveContainer>
         </div>
+      )}
+
+      {/* ATR */}
+      {atrData.length > 0 && (
+        <IndicatorChart
+          data={atrData}
+          label="ATR (14) — Volatilità in $"
+          color="#22c55e"
+        />
+      )}
+
+      {/* Stochastic K/D */}
+      {stochChartData.length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-4">
+          <span className="text-muted text-xs uppercase tracking-wide">
+            Stochastic (14, 3)
+          </span>
+          <ResponsiveContainer width="100%" height={140}>
+            <LineChart data={stochChartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a2d3a" />
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 10, fill: "#6b7280" }}
+                tickFormatter={(v) => v.slice(5)}
+                interval="preserveStartEnd"
+              />
+              <YAxis tick={{ fontSize: 10, fill: "#6b7280" }} domain={[0, 100]} />
+              <Tooltip
+                contentStyle={{
+                  background: "#1a1d27",
+                  border: "1px solid #2a2d3a",
+                  borderRadius: 8,
+                }}
+                formatter={(v: number, name: string) => [v.toFixed(1), name]}
+              />
+              <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="3 3" />
+              <ReferenceLine y={20} stroke="#22c55e" strokeDasharray="3 3" />
+              <Line type="monotone" dataKey="k" stroke="#a78bfa" strokeWidth={1.5} dot={false} isAnimationActive={false} name="%K" />
+              <Line type="monotone" dataKey="d" stroke="#f59e0b" strokeWidth={1.5} dot={false} isAnimationActive={false} name="%D" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* ADX */}
+      {adxData.length > 0 && (
+        <IndicatorChart
+          data={adxData}
+          label="ADX (14) — Forza del trend"
+          color="#f59e0b"
+          referenceLines={[25]}
+          domain={[0, 100]}
+        />
+      )}
+
+      {/* OBV */}
+      {obvData.length > 0 && (
+        <IndicatorChart
+          data={obvData}
+          label="OBV — On-Balance Volume"
+          color="#3b82f6"
+        />
+      )}
+
+      {/* Williams %R */}
+      {wrData.length > 0 && (
+        <IndicatorChart
+          data={wrData}
+          label="Williams %R (14)"
+          color="#ec4899"
+          referenceLines={[-20, -80]}
+          domain={[-100, 0]}
+        />
       )}
     </div>
   );

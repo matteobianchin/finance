@@ -8,7 +8,7 @@ import ComparisonChart from "@/components/charts/ComparisonChart";
 import SignalsPanel from "@/components/equity/SignalsPanel";
 import FundamentalsTable from "@/components/equity/FundamentalsTable";
 import NewsFeed from "@/components/equity/NewsFeed";
-import AIAnalysisButton from "@/components/equity/AIAnalysisButton";
+import AIAnalysisPanel from "@/components/equity/AIAnalysisPanel";
 import { useWatchlist } from "@/components/overview/WatchlistManager";
 import { getPriceHistory, getIncomeStatement, getNews, getQuote } from "@/lib/openbb";
 import { EMA } from "technicalindicators";
@@ -100,7 +100,11 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
             </div>
           )}
         </div>
-        <AIAnalysisButton />
+        <AIAnalysisPanel
+          ticker={symbol}
+          price={quote?.price ?? 0}
+          change={quote?.day_change_percent ?? 0}
+        />
       </div>
 
       {error && (

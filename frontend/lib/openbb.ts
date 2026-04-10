@@ -128,6 +128,29 @@ export async function getCryptoQuote(symbol: string): Promise<Quote> {
   return results[0];
 }
 
+export interface EarningsEvent {
+  symbol: string;
+  date: string;
+  eps_estimate?: number;
+  eps_actual?: number;
+  revenue_estimate?: number;
+  revenue_actual?: number;
+}
+
+export async function getEarningsCalendar(symbols: string[]): Promise<EarningsEvent[]> {
+  const results = await Promise.allSettled(
+    symbols.map((s) =>
+      obbFetch<EarningsEvent>("equity/calendar/earnings", {
+        symbol: s,
+        provider: "yfinance",
+      })
+    )
+  );
+  return results
+    .filter((r): r is PromiseFulfilledResult<EarningsEvent[]> => r.status === "fulfilled")
+    .flatMap((r) => r.value);
+}
+
 export async function getCryptoTop10(): Promise<Quote[]> {
   const symbols = ["BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD",
                    "ADA-USD", "AVAX-USD", "DOGE-USD", "DOT-USD", "MATIC-USD"];

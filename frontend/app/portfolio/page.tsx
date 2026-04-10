@@ -3,21 +3,24 @@
 import { useState } from "react";
 import CSVImport from "@/components/portfolio/CSVImport";
 import PortfolioTable from "@/components/portfolio/PortfolioTable";
+import PortfolioHistoryChart from "@/components/portfolio/PortfolioHistoryChart";
 import AllocationPieChart from "@/components/charts/AllocationPieChart";
 import { getQuote } from "@/lib/openbb";
 import { calcPositions } from "@/lib/portfolio";
 import type { PortfolioRow, PortfolioPosition } from "@/types/openbb";
 
 export default function PortfolioPage() {
+  const [rows, setRows] = useState<PortfolioRow[]>([]);
   const [positions, setPositions] = useState<PortfolioPosition[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleImport(rows: PortfolioRow[]) {
+  async function handleImport(importedRows: PortfolioRow[]) {
     setLoading(true);
     setError(null);
+    setRows(importedRows);
     try {
-      const uniqueTickers = [...new Set(rows.map((r) => r.ticker))];
+      const uniqueTickers = [...new Set(importedRows.map((r) => r.ticker))];
       const quoteResults = await Promise.allSettled(
         uniqueTickers.map((t) => getQuote(t).then((q) => ({ ticker: t, price: q.price })))
       );
@@ -34,7 +37,7 @@ export default function PortfolioPage() {
         setError(`Impossibile recuperare prezzi per: ${failedTickers.join(", ")}`);
       }
 
-      setPositions(calcPositions(rows, prices));
+      setPositions(calcPositions(importedRows, prices));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -59,6 +62,7 @@ export default function PortfolioPage() {
       {positions.length > 0 && (
         <>
           <PortfolioTable positions={positions} />
+          <PortfolioHistoryChart rows={rows} />
           <div className="bg-card border border-border rounded-xl p-4">
             <h3 className="text-white font-medium mb-2">Allocazione</h3>
             <AllocationPieChart positions={positions} />

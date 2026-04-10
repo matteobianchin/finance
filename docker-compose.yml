@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile.api
     ports:
       - "6900:6900"
+    volumes:
+      - ./vecchio/user_settings.json:/root/.openbb_platform/user_settings.json:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:6900/api/v1/system/status"]
       interval: 30s
@@ -20,10 +22,14 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   worker:
     build: ./worker
-    env_file: .env
     environment:
       - WORKER_ENABLED=false
       - OPENBB_API_URL=http://backend:6900

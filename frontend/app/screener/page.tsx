@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getPriceHistory, getQuote } from "@/lib/openbb";
-import { RSI } from "technicalindicators";
+import { getScreenerData } from "@/lib/openbb";
 import { filterRows, sortRows } from "@/lib/screener";
 import { useWatchlist } from "@/components/providers/WatchlistProvider";
 import type { ScreenerRow, SortKey, SortDir } from "@/lib/screener";
@@ -33,40 +32,23 @@ export default function ScreenerPage() {
 
   useEffect(() => {
     setLoading(true);
-    Promise.allSettled(
-      universe.map(async (ticker) => {
-        const [quote, hist1m] = await Promise.all([
-          getQuote(ticker).catch(() => null),
-          getPriceHistory(ticker, "1M").catch(() => []),
-        ]);
-        if (!quote) return null;
-
-        const closes = hist1m.map((b) => b.close);
-        const rsiVals = closes.length >= 14 ? RSI.calculate({ values: closes, period: 14 }) : [];
-        const rsi = rsiVals.at(-1);
-        const return1m =
-          closes.length >= 2
-            ? ((closes.at(-1)! - closes[0]) / closes[0]) * 100
-            : undefined;
-
-        return {
-          ticker,
-          price: quote.price,
-          change1d: quote.day_change_percent,
-          volume: quote.volume ?? 0,
-          marketCap: quote.market_cap,
-          pe: quote.pe_ratio,
-          return1m,
-          rsi,
-        } as ScreenerRow;
+    getScreenerData(universe)
+      .then((data) => {
+        setRows(
+          data.map((r) => ({
+            ticker:    r.ticker,
+            price:     r.price,
+            change1d:  r.change1d,
+            volume:    r.volume ?? 0,
+            marketCap: r.marketCap,
+            pe:        r.pe,
+            return1m:  r.return1m,
+            rsi:       r.rsi,
+          }))
+        );
       })
-    ).then((results) => {
-      setRows(
-        results
-          .filter((r) => r.status === "fulfilled" && r.value !== null)
-          .map((r) => (r as PromiseFulfilledResult<ScreenerRow>).value)
-      );
-    }).finally(() => setLoading(false));
+      .catch(() => setRows([]))
+      .finally(() => setLoading(false));
   }, [universe.join(",")]);
 
   const filtered = useMemo(() => {

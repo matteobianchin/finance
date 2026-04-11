@@ -1,21 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { getPriceHistory } from "@/lib/openbb";
-import {
-  dailyReturns,
-  annualizedVolatility,
-  sharpeRatio,
-  maxDrawdown,
-  beta,
-} from "@/lib/quant";
+import { getPriceHistory, getQuant } from "@/lib/openbb";
 import { useWatchlist } from "@/components/providers/WatchlistProvider";
 import QuantStatsCard from "@/components/analisi/QuantStatsCard";
 import ReturnsHistogram from "@/components/analisi/ReturnsHistogram";
 import VolatilityChart from "@/components/analisi/VolatilityChart";
 import DrawdownChart from "@/components/analisi/DrawdownChart";
 import CorrelationHeatmap from "@/components/analisi/CorrelationHeatmap";
-import type { PriceBar, Timeframe } from "@/types/openbb";
+import type { QuantResult, Timeframe } from "@/types/openbb";
 
 const TIMEFRAMES: Timeframe[] = ["3M", "6M", "1Y", "5Y"];
 
@@ -23,27 +16,21 @@ export default function AnalisiPage() {
   const { tickers } = useWatchlist();
   const [selectedTicker, setSelectedTicker] = useState<string>("");
   const [timeframe, setTimeframe] = useState<Timeframe>("1Y");
-  const [history, setHistory] = useState<PriceBar[]>([]);
-  const [spyHistory, setSpyHistory] = useState<PriceBar[]>([]);
+  const [quant, setQuant] = useState<QuantResult | null>(null);
   const [corrSeries, setCorrSeries] = useState<{ ticker: string; closes: number[] }[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (tickers.length > 0 && !selectedTicker) {
-      setSelectedTicker(tickers[0]);
-    }
+    if (tickers.length > 0 && !selectedTicker) setSelectedTicker(tickers[0]);
   }, [tickers]);
 
   useEffect(() => {
     if (!selectedTicker) return;
     setLoading(true);
-    Promise.allSettled([
-      getPriceHistory(selectedTicker, timeframe),
-      getPriceHistory("SPY", timeframe),
-    ]).then(([histResult, spyResult]) => {
-      if (histResult.status === "fulfilled") setHistory(histResult.value);
-      if (spyResult.status === "fulfilled") setSpyHistory(spyResult.value);
-    }).finally(() => setLoading(false));
+    getQuant(selectedTicker, timeframe, "SPY")
+      .then(setQuant)
+      .catch(() => setQuant(null))
+      .finally(() => setLoading(false));
   }, [selectedTicker, timeframe]);
 
   useEffect(() => {
@@ -67,31 +54,8 @@ export default function AnalisiPage() {
     });
   }, [tickers.join(",")]);
 
-  const closes = history.map((b) => b.close);
-  const dates = history.map((b) => b.date);
-  const closesKey = closes.join(",");
-
-  const returns = useMemo(() => dailyReturns(closes), [closesKey]);
-  const spyReturns = useMemo(
-    () => dailyReturns(spyHistory.map((b) => b.close)),
-    [spyHistory.map((b) => b.close).join(",")]
-  );
-
-  const totalReturn =
-    closes.length >= 2
-      ? ((closes.at(-1)! - closes[0]) / closes[0]) * 100
-      : null;
-  const vol = returns.length >= 2 ? annualizedVolatility(returns) * 100 : null;
-  const sharpe = returns.length >= 2 ? sharpeRatio(returns, 0.05) : null;
-  const dd = closes.length >= 2 ? maxDrawdown(closes) : null;
-  const betaVal =
-    returns.length >= 2 && spyReturns.length >= 2
-      ? beta(returns, spyReturns)
-      : null;
-
   return (
     <div className="space-y-4 max-w-5xl">
-      {/* Header + selectors */}
       <div className="flex justify-between items-center flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-white">Analisi Quantitativa</h1>
         <div className="flex gap-2 items-center flex-wrap">
@@ -102,9 +66,7 @@ export default function AnalisiPage() {
           >
             {tickers.length === 0 && <option value="">—</option>}
             {tickers.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
+              <option key={t} value={t}>{t}</option>
             ))}
           </select>
           <div className="flex gap-1">
@@ -113,9 +75,7 @@ export default function AnalisiPage() {
                 key={tf}
                 onClick={() => setTimeframe(tf)}
                 className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                  tf === timeframe
-                    ? "bg-accent text-white"
-                    : "text-muted hover:text-white"
+                  tf === timeframe ? "bg-accent text-white" : "text-muted hover:text-white"
                 }`}
               >
                 {tf}
@@ -134,64 +94,64 @@ export default function AnalisiPage() {
       {loading && (
         <div className="grid grid-cols-5 gap-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div
-              key={i}
-              className="bg-card border border-border rounded-xl p-4 animate-pulse h-20"
-            />
+            <div key={i} className="bg-card border border-border rounded-xl p-4 animate-pulse h-20" />
           ))}
         </div>
       )}
 
-      {!loading && closes.length > 0 && (
+      {!loading && quant && (
         <>
-          {/* Stat cards */}
           <div className="grid grid-cols-5 gap-3">
             <QuantStatsCard
-              label={`Rendimento ${timeframe}`}
-              value={
-                totalReturn !== null
-                  ? `${totalReturn >= 0 ? "+" : ""}${totalReturn.toFixed(1)}%`
-                  : "—"
-              }
-              color={
-                totalReturn !== null
-                  ? totalReturn >= 0
-                    ? "text-positive"
-                    : "text-negative"
-                  : "text-white"
-              }
-            />
-            <QuantStatsCard
-              label="Volatilità Ann."
-              value={vol !== null ? `${vol.toFixed(1)}%` : "—"}
+              label={`Volatilità Ann. ${timeframe}`}
+              value={`${(quant.annualized_vol * 100).toFixed(1)}%`}
             />
             <QuantStatsCard
               label="Sharpe Ratio"
-              value={sharpe !== null ? sharpe.toFixed(2) : "—"}
+              value={quant.sharpe.toFixed(2)}
               color="text-purple-400"
             />
             <QuantStatsCard
+              label="Sortino Ratio"
+              value={quant.sortino.toFixed(2)}
+              color="text-blue-400"
+            />
+            <QuantStatsCard
               label="Max Drawdown"
-              value={dd !== null ? `${(dd.value * 100).toFixed(1)}%` : "—"}
+              value={`${(quant.max_drawdown.value * 100).toFixed(1)}%`}
               color="text-negative"
-              subtext={dd ? `${dd.durationDays}gg durata` : undefined}
+              subtext={`${quant.max_drawdown.duration_days}gg durata`}
             />
             <QuantStatsCard
               label="Beta vs SPY"
-              value={betaVal !== null ? betaVal.toFixed(2) : "N/A"}
+              value={quant.beta != null ? quant.beta.toFixed(2) : "N/A"}
               color="text-blue-400"
             />
           </div>
 
-          {/* Row 1: histogram + volatility */}
-          <div className="grid grid-cols-2 gap-4">
-            <ReturnsHistogram closes={closes} />
-            <VolatilityChart closes={closes} dates={dates} />
+          {/* Row 2: new metrics */}
+          <div className="grid grid-cols-4 gap-3">
+            <QuantStatsCard label="VaR 95%" value={`${(quant.var_95 * 100).toFixed(2)}%`} color="text-negative" />
+            <QuantStatsCard label="CVaR 95%" value={`${(quant.cvar_95 * 100).toFixed(2)}%`} color="text-negative" />
+            <QuantStatsCard label="Calmar" value={quant.calmar.toFixed(2)} />
+            <QuantStatsCard label="Skewness" value={quant.skewness.toFixed(2)} />
           </div>
 
-          {/* Row 2: drawdown + correlation */}
           <div className="grid grid-cols-2 gap-4">
-            <DrawdownChart closes={closes} dates={dates} />
+            <ReturnsHistogram
+              histogram={quant.histogram}
+              skewness={quant.skewness}
+              kurtosis={quant.kurtosis}
+            />
+            <VolatilityChart data={quant.rolling_vol} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <DrawdownChart
+              data={quant.drawdown_series}
+              maxDrawdownValue={quant.max_drawdown.value}
+              durationDays={quant.max_drawdown.duration_days}
+            />
             <CorrelationHeatmap series={corrSeries} />
           </div>
         </>

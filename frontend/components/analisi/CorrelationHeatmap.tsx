@@ -1,7 +1,30 @@
 "use client";
 
 import { useMemo } from "react";
-import { correlationMatrix } from "@/lib/quant";
+
+// Inline — only used here, no longer needs quant.ts
+function pearsonCorrelation(a: number[], b: number[]): number {
+  const n = Math.min(a.length, b.length);
+  const ma = a.slice(0, n).reduce((s, v) => s + v, 0) / n;
+  const mb = b.slice(0, n).reduce((s, v) => s + v, 0) / n;
+  let num = 0, da = 0, db = 0;
+  for (let i = 0; i < n; i++) {
+    num += (a[i] - ma) * (b[i] - mb);
+    da  += (a[i] - ma) ** 2;
+    db  += (b[i] - mb) ** 2;
+  }
+  const denom = Math.sqrt(da * db);
+  return denom === 0 ? 0 : num / denom;
+}
+
+function correlationMatrix(series: number[][]): number[][] {
+  const n = series.length;
+  return Array.from({ length: n }, (_, i) =>
+    Array.from({ length: n }, (__, j) =>
+      i === j ? 1 : pearsonCorrelation(series[i], series[j])
+    )
+  );
+}
 
 interface TickerSeries {
   ticker: string;

@@ -1,14 +1,6 @@
 // Timeframe per grafici prezzi
 export type Timeframe = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "5Y";
 
-// Struttura comune di ogni risposta OpenBB
-export interface OBBResponse<T> {
-  results: T[];
-  provider: string;
-  warnings: string[] | null;
-  metadata: Record<string, unknown> | null;
-}
-
 // Prezzi storici (equity + crypto)
 export interface PriceBar {
   date: string;
@@ -62,6 +54,12 @@ export interface KeyMetrics {
   return_on_equity: number | null;
 }
 
+// Fondamentali unificati (risposta /fundamentals/{ticker})
+export interface FundamentalsResult {
+  income: IncomeStatement[];
+  metrics: KeyMetrics[];
+}
+
 // News
 export interface NewsArticle {
   date: string;
@@ -110,4 +108,51 @@ export interface EarningsEvent {
 export interface ApiError {
   message: string;
   provider?: string;
+}
+
+// ── Signals (risposta /signals/{ticker}) ────────────────────────────────────
+
+export interface SignalsResult {
+  dates: string[];
+  closes: number[];
+  rsi: { date: string; value: number }[];
+  macd_hist: { date: string; value: number; macd: number | null; signal: number | null }[];
+  bbands: { date: string; upper: number; middle: number | null; lower: number | null; price: number }[];
+  atr: { date: string; value: number }[];
+  stoch: { date: string; k: number; d: number | null }[];
+  adx: { date: string; value: number }[];
+  obv: { date: string; value: number }[];
+  williams_r: { date: string; value: number }[];
+  last: {
+    rsi: number | null;
+    macd_hist: number | null;
+    bb_upper: number | null;
+    bb_lower: number | null;
+    atr: number | null;
+    stoch_k: number | null;
+    stoch_d: number | null;
+    price: number | null;
+  };
+}
+
+// ── Quant (risposta /quant/{ticker}) ────────────────────────────────────────
+
+export interface QuantResult {
+  timeframe: string;
+  annualized_vol: number;
+  sharpe: number;
+  sortino: number;
+  calmar: number;
+  var_95: number;
+  var_99: number;
+  cvar_95: number;
+  skewness: number;
+  kurtosis: number;
+  max_drawdown: { value: number; duration_days: number };
+  drawdown_series: { date: string; value: number }[];
+  rolling_vol: { date: string; value: number }[];
+  rolling_sharpe: { date: string; value: number }[];
+  rolling_beta?: { date: string; value: number }[];
+  beta?: number;
+  histogram: { x: number; count: number }[];
 }

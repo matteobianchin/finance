@@ -13,6 +13,18 @@ services:
       timeout: 10s
       retries: 3
 
+  domain-api:
+    build:
+      context: ./backend/domain_api
+      dockerfile: Dockerfile
+    ports:
+      - "6901:6901"
+    depends_on:
+      - backend
+    environment:
+      OPENBB_BACKEND_URL: http://backend:6900
+    restart: unless-stopped
+
   frontend:
     build: ./frontend
     ports:
@@ -24,6 +36,8 @@ services:
       - OPENBB_INTERNAL_URL=http://backend:6900
       # Required for AI analysis — set in .env or pass here
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # Domain API — all quant math and data orchestration
+      - DOMAIN_API_URL=http://domain-api:6901
     depends_on:
       backend:
         condition: service_healthy

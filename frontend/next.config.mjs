@@ -4,8 +4,8 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: "/api/openbb/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:6900"}/api/v1/:path*`,
+        source: "/api/domain/:path*",
+        destination: `${process.env.DOMAIN_API_URL ?? "http://localhost:6901"}/:path*`,
       },
     ];
   },

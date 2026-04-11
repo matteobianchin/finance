@@ -1,156 +1,48 @@
 "use client";
 
-import { useMemo } from "react";
-import {
-  RSI, MACD, BollingerBands,
-  ATR, Stochastic, ADX, OBV, WilliamsR,
-} from "technicalindicators";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, ReferenceLine,
 } from "recharts";
 import IndicatorChart from "@/components/charts/IndicatorChart";
-import type { PriceBar } from "@/types/openbb";
+import type { SignalsResult } from "@/types/openbb";
 
 interface Props {
-  data: PriceBar[];
+  signals: SignalsResult;
 }
 
-function interpretRsi(value: number): { label: string; color: string } {
+function interpretRsi(value: number | null): { label: string; color: string } {
+  if (value == null) return { label: "—", color: "text-muted" };
   if (value >= 70) return { label: "Ipercomprato", color: "text-negative" };
   if (value <= 30) return { label: "Ipervenduto", color: "text-positive" };
   return { label: "Neutrale", color: "text-muted" };
 }
 
-function interpretMacd(hist: number): { label: string; color: string } {
+function interpretMacd(hist: number | null): { label: string; color: string } {
+  if (hist == null) return { label: "—", color: "text-muted" };
   if (hist > 0) return { label: "Rialzista", color: "text-positive" };
   if (hist < 0) return { label: "Ribassista", color: "text-negative" };
   return { label: "Neutrale", color: "text-muted" };
 }
 
 function interpretBB(
-  price: number,
-  upper: number,
-  lower: number
+  price: number | null,
+  upper: number | null,
+  lower: number | null
 ): { label: string; color: string } {
+  if (price == null || upper == null || lower == null)
+    return { label: "—", color: "text-muted" };
   if (price >= upper) return { label: "Sopra banda sup.", color: "text-negative" };
   if (price <= lower) return { label: "Sotto banda inf.", color: "text-positive" };
   return { label: "Dentro le bande", color: "text-muted" };
 }
 
-export default function SignalsPanel({ data }: Props) {
-  const closes = data.map((d) => d.close);
-  const highs = data.map((d) => d.high);
-  const lows = data.map((d) => d.low);
-  const volumes = data.map((d) => d.volume ?? 0);
-  const dates = data.map((d) => d.date.slice(0, 10));
+export default function SignalsPanel({ signals }: Props) {
+  const { last, rsi, macd_hist, bbands, atr, stoch, adx, obv, williams_r } = signals;
 
-  const closesKey = closes.join(",");
-  const hlKey = highs.join(",");
-
-  const rsiValues = useMemo(() => {
-    if (closes.length < 14) return [];
-    return RSI.calculate({ values: closes, period: 14 });
-  }, [closesKey]);
-
-  const macdValues = useMemo(() => {
-    if (closes.length < 26) return [];
-    return MACD.calculate({
-      values: closes,
-      fastPeriod: 12, slowPeriod: 26, signalPeriod: 9,
-      SimpleMAOscillator: false, SimpleMASignal: false,
-    });
-  }, [closesKey]);
-
-  const bbValues = useMemo(() => {
-    if (closes.length < 20) return [];
-    return BollingerBands.calculate({ values: closes, period: 20, stdDev: 2 });
-  }, [closesKey]);
-
-  const atrValues = useMemo(() => {
-    if (data.length < 14) return [];
-    return ATR.calculate({ high: highs, low: lows, close: closes, period: 14 });
-  }, [hlKey]);
-
-  const stochValues = useMemo(() => {
-    if (data.length < 14) return [];
-    return Stochastic.calculate({
-      high: highs, low: lows, close: closes,
-      period: 14, signalPeriod: 3,
-    });
-  }, [hlKey]);
-
-  const adxValues = useMemo(() => {
-    if (data.length < 14) return [];
-    return ADX.calculate({ high: highs, low: lows, close: closes, period: 14 });
-  }, [hlKey]);
-
-  const obvValues = useMemo(() => {
-    if (data.length < 2) return [];
-    return OBV.calculate({ close: closes, volume: volumes });
-  }, [closesKey]);
-
-  const wrValues = useMemo(() => {
-    if (data.length < 14) return [];
-    return WilliamsR.calculate({ high: highs, low: lows, close: closes, period: 14 });
-  }, [hlKey]);
-
-  function align<T>(values: T[], total: number) {
-    return values.map((v, i) => ({
-      date: dates[total - values.length + i] ?? "",
-      value: v,
-    }));
-  }
-
-  const rsiData = align(rsiValues, dates.length).map(({ date, value }) => ({
-    date,
-    value: value as number,
-  }));
-  const macdHistData = align(macdValues, dates.length).map(({ date, value }) => ({
-    date,
-    value: (value as { histogram?: number }).histogram ?? 0,
-  }));
-  const atrData = align(atrValues, dates.length).map(({ date, value }) => ({
-    date,
-    value: value as number,
-  }));
-  const adxData = align(adxValues, dates.length).map(({ date, value }) => ({
-    date,
-    value: (value as { adx: number }).adx,
-  }));
-  const obvData = align(obvValues, dates.length).map(({ date, value }) => ({
-    date,
-    value: value as number,
-  }));
-  const wrData = align(wrValues, dates.length).map(({ date, value }) => ({
-    date,
-    value: value as number,
-  }));
-
-  const stochChartData = stochValues.map((v, i) => ({
-    date: dates[dates.length - stochValues.length + i] ?? "",
-    k: v.k,
-    d: v.d,
-  }));
-
-  const bbChartData = bbValues.map((v, i) => ({
-    date: dates[dates.length - bbValues.length + i],
-    upper: v.upper,
-    middle: v.middle,
-    lower: v.lower,
-    price: closes[closes.length - bbValues.length + i],
-  }));
-
-  const lastRsi = rsiValues.at(-1);
-  const lastMacdHist = macdValues.at(-1)?.histogram ?? 0;
-  const lastBB = bbValues.at(-1);
-  const lastPrice = closes.at(-1) ?? 0;
-  const lastAtr = atrValues.at(-1);
-  const lastStoch = stochValues.at(-1);
-
-  const rsiSignal = lastRsi !== undefined ? interpretRsi(lastRsi) : null;
-  const macdSignal = interpretMacd(lastMacdHist);
-  const bbSignal = lastBB ? interpretBB(lastPrice, lastBB.upper, lastBB.lower) : null;
+  const rsiSignal = interpretRsi(last.rsi);
+  const macdSignal = interpretMacd(last.macd_hist);
+  const bbSignal = interpretBB(last.price, last.bb_upper, last.bb_lower);
 
   return (
     <div className="space-y-4">
@@ -158,50 +50,46 @@ export default function SignalsPanel({ data }: Props) {
       <div className="bg-card border border-border rounded-xl p-4 grid grid-cols-5 gap-4">
         <div>
           <span className="text-muted text-xs uppercase">RSI (14)</span>
-          <p className="text-white font-semibold">{lastRsi?.toFixed(1) ?? "—"}</p>
-          {rsiSignal && (
-            <p className={`text-sm ${rsiSignal.color}`}>{rsiSignal.label}</p>
-          )}
+          <p className="text-white font-semibold">{last.rsi?.toFixed(1) ?? "—"}</p>
+          <p className={`text-sm ${rsiSignal.color}`}>{rsiSignal.label}</p>
         </div>
         <div>
           <span className="text-muted text-xs uppercase">MACD</span>
-          <p className="text-white font-semibold">{lastMacdHist.toFixed(3)}</p>
+          <p className="text-white font-semibold">{last.macd_hist?.toFixed(3) ?? "—"}</p>
           <p className={`text-sm ${macdSignal.color}`}>{macdSignal.label}</p>
         </div>
         <div>
           <span className="text-muted text-xs uppercase">Bollinger (20)</span>
           <p className="text-white font-semibold">
-            {lastBB ? `$${lastBB.upper.toFixed(1)}` : "—"}
+            {last.bb_upper != null ? `$${last.bb_upper.toFixed(1)}` : "—"}
           </p>
-          {bbSignal && (
-            <p className={`text-sm ${bbSignal.color}`}>{bbSignal.label}</p>
-          )}
+          <p className={`text-sm ${bbSignal.color}`}>{bbSignal.label}</p>
         </div>
         <div>
           <span className="text-muted text-xs uppercase">ATR (14)</span>
           <p className="text-white font-semibold">
-            {lastAtr ? `$${lastAtr.toFixed(2)}` : "—"}
+            {last.atr != null ? `$${last.atr.toFixed(2)}` : "—"}
           </p>
           <p className="text-muted text-sm">Volatilità</p>
         </div>
         <div>
           <span className="text-muted text-xs uppercase">Stochastic K</span>
           <p className="text-white font-semibold">
-            {lastStoch ? lastStoch.k.toFixed(1) : "—"}
+            {last.stoch_k != null ? last.stoch_k.toFixed(1) : "—"}
           </p>
-          {lastStoch && (
+          {last.stoch_k != null && (
             <p
               className={`text-sm ${
-                lastStoch.k >= 80
+                last.stoch_k >= 80
                   ? "text-negative"
-                  : lastStoch.k <= 20
+                  : last.stoch_k <= 20
                   ? "text-positive"
                   : "text-muted"
               }`}
             >
-              {lastStoch.k >= 80
+              {last.stoch_k >= 80
                 ? "Ipercomprato"
-                : lastStoch.k <= 20
+                : last.stoch_k <= 20
                 ? "Ipervenduto"
                 : "Neutrale"}
             </p>
@@ -210,9 +98,9 @@ export default function SignalsPanel({ data }: Props) {
       </div>
 
       {/* RSI */}
-      {rsiData.length > 0 && (
+      {rsi.length > 0 && (
         <IndicatorChart
-          data={rsiData}
+          data={rsi}
           label="RSI (14)"
           color="#a78bfa"
           referenceLines={[70, 30]}
@@ -221,9 +109,9 @@ export default function SignalsPanel({ data }: Props) {
       )}
 
       {/* MACD Histogram */}
-      {macdHistData.length > 0 && (
+      {macd_hist.length > 0 && (
         <IndicatorChart
-          data={macdHistData}
+          data={macd_hist}
           label="MACD Histogram"
           color="#3b82f6"
           referenceLines={[0]}
@@ -231,13 +119,13 @@ export default function SignalsPanel({ data }: Props) {
       )}
 
       {/* Bollinger Bands */}
-      {bbChartData.length > 0 && (
+      {bbands.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4">
           <span className="text-muted text-xs uppercase tracking-wide">
             Bollinger Bands (20, 2σ)
           </span>
           <ResponsiveContainer width="100%" height={140}>
-            <LineChart data={bbChartData}>
+            <LineChart data={bbands}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a2d3a" />
               <XAxis
                 dataKey="date"
@@ -268,22 +156,22 @@ export default function SignalsPanel({ data }: Props) {
       )}
 
       {/* ATR */}
-      {atrData.length > 0 && (
+      {atr.length > 0 && (
         <IndicatorChart
-          data={atrData}
+          data={atr}
           label="ATR (14) — Volatilità in $"
           color="#22c55e"
         />
       )}
 
       {/* Stochastic K/D */}
-      {stochChartData.length > 0 && (
+      {stoch.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4">
           <span className="text-muted text-xs uppercase tracking-wide">
             Stochastic (14, 3)
           </span>
           <ResponsiveContainer width="100%" height={140}>
-            <LineChart data={stochChartData}>
+            <LineChart data={stoch}>
               <CartesianGrid strokeDasharray="3 3" stroke="#2a2d3a" />
               <XAxis
                 dataKey="date"
@@ -310,9 +198,9 @@ export default function SignalsPanel({ data }: Props) {
       )}
 
       {/* ADX */}
-      {adxData.length > 0 && (
+      {adx.length > 0 && (
         <IndicatorChart
-          data={adxData}
+          data={adx}
           label="ADX (14) — Forza del trend"
           color="#f59e0b"
           referenceLines={[25]}
@@ -321,18 +209,18 @@ export default function SignalsPanel({ data }: Props) {
       )}
 
       {/* OBV */}
-      {obvData.length > 0 && (
+      {obv.length > 0 && (
         <IndicatorChart
-          data={obvData}
+          data={obv}
           label="OBV — On-Balance Volume"
           color="#3b82f6"
         />
       )}
 
       {/* Williams %R */}
-      {wrData.length > 0 && (
+      {williams_r.length > 0 && (
         <IndicatorChart
-          data={wrData}
+          data={williams_r}
           label="Williams %R (14)"
           color="#ec4899"
           referenceLines={[-20, -80]}

@@ -10,9 +10,9 @@ import FundamentalsTable from "@/components/equity/FundamentalsTable";
 import NewsFeed from "@/components/equity/NewsFeed";
 import AIAnalysisPanel from "@/components/equity/AIAnalysisPanel";
 import { useWatchlist } from "@/components/providers/WatchlistProvider";
-import { getPriceHistory, getIncomeStatement, getNews, getQuote } from "@/lib/openbb";
+import { getPriceHistory, getIncomeStatement, getNews, getQuote, getSignals } from "@/lib/openbb";
 import { EMA } from "technicalindicators";
-import type { PriceBar, IncomeStatement, NewsArticle, Quote, Timeframe } from "@/types/openbb";
+import type { PriceBar, IncomeStatement, NewsArticle, Quote, Timeframe, SignalsResult } from "@/types/openbb";
 
 export default function EquityPage({ params }: { params: Promise<{ ticker: string }> }) {
   const { ticker } = use(params);
@@ -22,6 +22,7 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
   const [history, setHistory] = useState<PriceBar[]>([]);
   const [fundamentals, setFundamentals] = useState<IncomeStatement[]>([]);
   const [news, setNews] = useState<NewsArticle[]>([]);
+  const [signals, setSignals] = useState<SignalsResult | null>(null);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [chartLoading, setChartLoading] = useState(true);
   const [tabLoading, setTabLoading] = useState(false);
@@ -68,6 +69,13 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
   }, [symbol, timeframe]);
 
   useEffect(() => {
+    if (activeTab === "indicatori" && !signals) {
+      setTabLoading(true);
+      getSignals(symbol, timeframe)
+        .then(setSignals)
+        .catch(() => setSignals(null))
+        .finally(() => setTabLoading(false));
+    }
     if (activeTab === "fondamentali" && !fundamentals.length) {
       setTabLoading(true);
       getIncomeStatement(symbol)
@@ -183,7 +191,11 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
         {tabLoading ? (
           <p className="text-muted text-sm">Caricamento...</p>
         ) : activeTab === "indicatori" ? (
-          <SignalsPanel data={history} />
+          signals ? (
+            <SignalsPanel signals={signals} />
+          ) : (
+            <p className="text-muted text-sm">Caricamento indicatori...</p>
+          )
         ) : activeTab === "fondamentali" ? (
           <FundamentalsTable data={fundamentals} />
         ) : activeTab === "confronto" ? (

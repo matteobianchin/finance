@@ -3,3 +3,6 @@
 .superpowers/
 superpowers/
 frontend/next-env.d.ts
+
+# Git worktrees
+.worktrees/

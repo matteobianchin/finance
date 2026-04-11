@@ -1,4 +1,5 @@
 .env
+backend/user_settings.json
 .claude/
 .superpowers/
 superpowers/

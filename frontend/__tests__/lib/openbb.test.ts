@@ -1,159 +1,147 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  getPriceHistory,
-  getQuote,
-  searchEquity,
-  getIncomeStatement,
-  getNews,
-  getFredSeries,
-  getCryptoTop10,
-} from "@/lib/openbb";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { getQuote, getPriceHistory, getSignals, getQuant, getScreenerData, getCryptoTop10 } from "@/lib/openbb";
 
+// Mock global fetch
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+vi.stubGlobal("fetch", mockFetch);
 
-function mockOBBResponse<T>(results: T[]) {
-  return {
+function mockSuccess(data: unknown) {
+  mockFetch.mockResolvedValueOnce({
     ok: true,
-    json: async () => ({ results, provider: "yfinance", warnings: null, metadata: null }),
-  };
+    json: async () => data,
+  } as Response);
+}
+
+function mockFailure(status = 500) {
+  mockFetch.mockResolvedValueOnce({
+    ok: false,
+    status,
+    json: async () => ({}),
+  } as Response);
 }
 
 beforeEach(() => {
-  mockFetch.mockReset();
-  // In jsdom, window.location.origin is "http://localhost:3000"
-  // getBase() client-side returns window.location.origin + "/api/openbb"
-  // Tests only check that fetch is called with a URL containing the path segment
-});
-
-describe("getPriceHistory", () => {
-  it("returns price bars for a valid ticker", async () => {
-    const bars = [{ date: "2024-01-02", open: 185, high: 187, low: 184, close: 186, volume: 1000000 }];
-    mockFetch.mockResolvedValueOnce(mockOBBResponse(bars));
-
-    const result = await getPriceHistory("AAPL", "1M");
-    expect(result).toHaveLength(1);
-    expect(result[0].close).toBe(186);
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining("equity/price/historical"),
-      expect.objectContaining({ signal: expect.any(AbortSignal) })
-    );
-  });
-
-  it("uses correct start_date for 3M timeframe", async () => {
-    mockFetch.mockResolvedValueOnce(mockOBBResponse([]));
-    await getPriceHistory("AAPL", "3M");
-    const calledUrl = mockFetch.mock.calls[0][0] as string;
-    // 3M = 90 giorni fa — verifica che start_date sia nell'URL
-    expect(calledUrl).toContain("start_date=");
-  });
-
-  it("throws ApiError on HTTP failure", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
-    await expect(getPriceHistory("INVALID", "1M")).rejects.toThrow("OpenBB API error");
-  });
+  vi.clearAllMocks();
+  // Clear module-level cache between tests
+  vi.resetModules();
 });
 
 describe("getQuote", () => {
-  it("returns current quote", async () => {
-    const quote = [{ symbol: "AAPL", price: 185.5, day_change: 1.2, day_change_percent: 0.65 }];
-    mockFetch.mockResolvedValueOnce(mockOBBResponse(quote));
-
+  it("returns quote data from Domain API", async () => {
+    const quote = { symbol: "AAPL", price: 175.5, day_change_percent: 1.2 };
+    mockSuccess(quote);
     const result = await getQuote("AAPL");
-    expect(result.price).toBe(185.5);
-    expect(result.day_change_percent).toBe(0.65);
-  });
-
-  it("throws when no results returned", async () => {
-    mockFetch.mockResolvedValueOnce(mockOBBResponse([]));
-    await expect(getQuote("FAKE")).rejects.toThrow("No quote for FAKE");
-  });
-});
-
-describe("searchEquity", () => {
-  it("returns search results", async () => {
-    const results = [{ symbol: "AAPL", name: "Apple Inc.", exchange: "NASDAQ" }];
-    mockFetch.mockResolvedValueOnce(mockOBBResponse(results));
-
-    const result = await searchEquity("Apple");
-    expect(result).toHaveLength(1);
-    expect(result[0].symbol).toBe("AAPL");
-  });
-
-  it("returns empty array for empty query", async () => {
-    const result = await searchEquity("");
-    expect(result).toEqual([]);
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
-
-  it("returns empty array for whitespace-only query", async () => {
-    const result = await searchEquity("   ");
-    expect(result).toEqual([]);
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
-});
-
-describe("getIncomeStatement", () => {
-  it("returns income statement rows", async () => {
-    const rows = [{ date: "2023-09-30", period: "annual", revenue: 383285000000, net_income: 96995000000, eps: 6.13, ebitda: null, gross_profit: null }];
-    mockFetch.mockResolvedValueOnce(mockOBBResponse(rows));
-
-    const result = await getIncomeStatement("AAPL");
-    expect(result).toHaveLength(1);
-    expect(result[0].revenue).toBe(383285000000);
+    expect(result.symbol).toBe("AAPL");
+    expect(result.price).toBe(175.5);
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining("equity/fundamental/income"),
-      expect.anything()
+      expect.stringContaining("/quote/AAPL"),
+      expect.any(Object)
     );
   });
+
+  it("throws on non-ok response", async () => {
+    mockFailure(404);
+    await expect(getQuote("INVALID")).rejects.toThrow("Domain API error: 404");
+  });
 });
 
-describe("getNews", () => {
-  it("returns news articles", async () => {
-    const articles = [
-      { date: "2024-01-10T10:00:00Z", title: "Apple announces new product", url: "https://example.com", source: "Reuters" },
+describe("getPriceHistory", () => {
+  it("returns array of price bars", async () => {
+    const bars = [
+      { date: "2024-01-01", open: 100, high: 105, low: 99, close: 103, volume: 1000000 },
     ];
-    mockFetch.mockResolvedValueOnce(mockOBBResponse(articles));
-
-    const result = await getNews("AAPL");
+    mockSuccess(bars);
+    const result = await getPriceHistory("AAPL", "1M");
     expect(result).toHaveLength(1);
-    expect(result[0].title).toBe("Apple announces new product");
+    expect(result[0].close).toBe(103);
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining("equity/news"),
-      expect.anything()
+      expect.stringContaining("/history/AAPL"),
+      expect.any(Object)
     );
   });
 });
 
-describe("getFredSeries", () => {
-  it("returns FRED series data", async () => {
-    const series = [{ date: "2024-01-01", value: 5.33 }];
-    mockFetch.mockResolvedValueOnce(mockOBBResponse(series));
-
-    const result = await getFredSeries("DGS10");
-    expect(result).toHaveLength(1);
-    expect(result[0].value).toBe(5.33);
+describe("getSignals", () => {
+  it("returns SignalsResult with expected keys", async () => {
+    const signals = {
+      dates: ["2024-01-01"],
+      closes: [175.0],
+      rsi: [],
+      macd_hist: [],
+      bbands: [],
+      atr: [],
+      stoch: [],
+      adx: [],
+      obv: [],
+      williams_r: [],
+      last: { rsi: 62.4, macd_hist: 0.1, bb_upper: null, bb_lower: null,
+              atr: 1.5, stoch_k: null, stoch_d: null, price: 175.0 },
+    };
+    mockSuccess(signals);
+    const result = await getSignals("AAPL", "1M");
+    expect(result.last.rsi).toBe(62.4);
+    expect(result.williams_r).toBeDefined();
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/signals/AAPL"),
+      expect.any(Object)
+    );
   });
+});
 
-  it("accepts optional startDate override", async () => {
-    mockFetch.mockResolvedValueOnce(mockOBBResponse([]));
-    await getFredSeries("FEDFUNDS", "2020-01-01");
-    const calledUrl = mockFetch.mock.calls[0][0] as string;
-    expect(calledUrl).toContain("start_date=2020-01-01");
+describe("getQuant", () => {
+  it("returns QuantResult with expected keys", async () => {
+    const quant = {
+      timeframe: "1Y",
+      annualized_vol: 0.23,
+      sharpe: 1.2,
+      sortino: 1.5,
+      calmar: 0.9,
+      var_95: -0.02,
+      var_99: -0.03,
+      cvar_95: -0.025,
+      skewness: -0.3,
+      kurtosis: 3.1,
+      max_drawdown: { value: -0.18, duration_days: 45 },
+      drawdown_series: [],
+      rolling_vol: [],
+      rolling_sharpe: [],
+      histogram: [],
+    };
+    mockSuccess(quant);
+    const result = await getQuant("AAPL", "1Y");
+    expect(result.sharpe).toBe(1.2);
+    expect(result.max_drawdown.value).toBe(-0.18);
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/quant/AAPL"),
+      expect.any(Object)
+    );
+  });
+});
+
+describe("getScreenerData", () => {
+  it("returns array with screener rows", async () => {
+    const rows = [
+      { ticker: "AAPL", price: 175, change1d: 1.2, rsi: 62, return1m: 4.5 },
+    ];
+    mockSuccess(rows);
+    const result = await getScreenerData(["AAPL"]);
+    expect(result).toHaveLength(1);
+    expect(result[0].ticker).toBe("AAPL");
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/screener"),
+      expect.any(Object)
+    );
   });
 });
 
 describe("getCryptoTop10", () => {
-  it("returns successfully fetched quotes, skipping failed ones", async () => {
-    // Simula: prima fetch OK, seconda fallisce, resto OK
-    mockFetch
-      .mockResolvedValueOnce(mockOBBResponse([{ symbol: "BTC-USD", price: 65000, day_change: 100, day_change_percent: 0.15 }]))
-      .mockRejectedValueOnce(new Error("Network error"))
-      .mockResolvedValue(mockOBBResponse([{ symbol: "BNB-USD", price: 400, day_change: -5, day_change_percent: -1.2 }]));
-
+  it("calls /crypto/top endpoint", async () => {
+    mockSuccess([{ symbol: "BTC-USD", price: 68000 }]);
     const result = await getCryptoTop10();
-    // Deve restituire tutti quelli riusciti (non fallisce se alcuni falliscono)
-    expect(result.length).toBeGreaterThan(0);
-    expect(result.every((q) => q.price > 0)).toBe(true);
+    expect(result).toHaveLength(1);
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/crypto/top"),
+      expect.any(Object)
+    );
   });
 });

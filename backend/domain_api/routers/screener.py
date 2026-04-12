@@ -1,7 +1,7 @@
 import asyncio
 import pandas as pd
 import numpy as np
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fetcher import fetch_quote, fetch_history, timeframe_start
 from indicators import rsi as calc_rsi
 
@@ -59,6 +59,8 @@ async def _fetch_ticker(ticker: str) -> dict | None:
 @router.get("/screener")
 async def screener(symbols: str):
     tickers = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+    if len(tickers) > 20:
+        raise HTTPException(status_code=422, detail="Max 20 symbols")
     results = await asyncio.gather(*[_fetch_ticker(t) for t in tickers])
     return [r for r in results if r is not None]
 

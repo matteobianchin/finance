@@ -74,6 +74,7 @@ def _sync_fetch_quote(ticker: str) -> dict | None:
         return {
             "symbol":           ticker,
             "price":            float(price),
+            "day_change":       float(info.get("regularMarketChange", 0.0)),
             "day_change_percent": float(info.get("regularMarketChangePercent", 0.0)) * 100,
             "volume":           info.get("regularMarketVolume"),
             "market_cap":       info.get("marketCap"),

@@ -16,7 +16,7 @@ def timeframe_start(timeframe: str) -> str:
     today = date.today()
     mapping = {
         "1D":  today - timedelta(days=1),
-        "5D":  today - timedelta(days=5),
+        "1W":  today - timedelta(days=7),
         "1M":  today - timedelta(days=30),
         "3M":  today - timedelta(days=90),
         "6M":  today - timedelta(days=180),
@@ -58,9 +58,13 @@ async def fetch_history(
 ) -> list[dict]:
     """Async wrapper around yfinance history. Returns [] on any error."""
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(
-        None, _sync_fetch_history, ticker, start, interval
-    )
+    try:
+        return await asyncio.wait_for(
+            loop.run_in_executor(None, _sync_fetch_history, ticker, start, interval),
+            timeout=15.0,
+        )
+    except asyncio.TimeoutError:
+        return []
 
 
 # ── Quote ─────────────────────────────────────────────────────────────────────
@@ -75,7 +79,7 @@ def _sync_fetch_quote(ticker: str) -> dict | None:
             "symbol":           ticker,
             "price":            float(price),
             "day_change":       float(info.get("regularMarketChange", 0.0)),
-            "day_change_percent": float(info.get("regularMarketChangePercent", 0.0)) * 100,
+            "day_change_percent": float(info.get("regularMarketChangePercent", 0.0)),
             "volume":           info.get("regularMarketVolume"),
             "market_cap":       info.get("marketCap"),
             "pe_ratio":         info.get("trailingPE"),
@@ -89,4 +93,10 @@ def _sync_fetch_quote(ticker: str) -> dict | None:
 async def fetch_quote(ticker: str) -> dict | None:
     """Async wrapper around yfinance quote info. Returns None on any error."""
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, _sync_fetch_quote, ticker)
+    try:
+        return await asyncio.wait_for(
+            loop.run_in_executor(None, _sync_fetch_quote, ticker),
+            timeout=15.0,
+        )
+    except asyncio.TimeoutError:
+        return None

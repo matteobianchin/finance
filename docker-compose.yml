@@ -1,46 +1,30 @@
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.api
-    ports:
-      - "6900:6900"
-    volumes:
-      - ./backend/user_settings.json:/root/.openbb_platform/user_settings.json:ro
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6900/api/v1/system/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   domain-api:
     build:
       context: ./backend/domain_api
       dockerfile: Dockerfile
     ports:
       - "6901:6901"
-    depends_on:
-      - backend
     environment:
-      OPENBB_BACKEND_URL: http://backend:6900
+      FMP_API_KEY: ${FMP_API_KEY}
+      TIINGO_API_KEY: ${TIINGO_API_KEY}
+      FRED_API_KEY: ${FRED_API_KEY}
     restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        - DOMAIN_API_URL=http://domain-api:6901
     ports:
       - "3000:3000"
     environment:
-      # Used by next.config.mjs rewrite (server startup) — keeps backend URL out of browser bundle
-      - NEXT_PUBLIC_API_URL=http://backend:6900
-      # Used by Next.js Route Handlers (server-side direct calls, e.g. /api/analyze)
-      - OPENBB_INTERNAL_URL=http://backend:6900
-      # Required for AI analysis — set in .env or pass here
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      # Domain API — all quant math and data orchestration
+      # Domain API — all data, quant math, and signals
       - DOMAIN_API_URL=http://domain-api:6901
+      # Required for AI analysis
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     depends_on:
-      backend:
-        condition: service_healthy
+      - domain-api
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
       interval: 30s

@@ -1,9 +1,9 @@
 import asyncio
 import pandas as pd
-import pandas_ta as ta
 import numpy as np
 from fastapi import APIRouter
-from client import obb_get, timeframe_start
+from fetcher import fetch_quote, fetch_history, timeframe_start
+from indicators import rsi as calc_rsi
 
 router = APIRouter()
 
@@ -31,36 +31,28 @@ def _build_screener_row(
 
 async def _fetch_ticker(ticker: str) -> dict | None:
     try:
-        quote_res, hist_res = await asyncio.gather(
-            obb_get("equity/price/quote", {"symbol": ticker, "provider": "yfinance"}),
-            obb_get("equity/price/historical", {
-                "symbol": ticker,
-                "provider": "yfinance",
-                "start_date": timeframe_start("1M"),
-            }),
+        quote, hist = await asyncio.gather(
+            fetch_quote(ticker),
+            fetch_history(ticker, timeframe_start("1M")),
             return_exceptions=True,
         )
 
-        if isinstance(quote_res, Exception) or not quote_res:
+        if isinstance(quote, Exception) or not quote:
             return None
 
-        quote = quote_res[0]
-        rsi: float | None = None
+        rsi_val: float | None = None
         return_1m: float | None = None
 
-        if not isinstance(hist_res, Exception) and len(hist_res) >= 15:
-            df = pd.DataFrame(hist_res)
+        if not isinstance(hist, Exception) and len(hist) >= 15:
+            df = pd.DataFrame(hist)
             df["close"] = pd.to_numeric(df["close"], errors="coerce")
-            df.ta.rsi(length=14, append=True)
-            rsi_col = next((c for c in df.columns if c.startswith("RSI_")), None)
-            if rsi_col:
-                series = df[rsi_col].dropna()
-                rsi = float(series.iloc[-1]) if len(series) > 0 else None
+            rsi_series = calc_rsi(df["close"], length=14).dropna()
+            rsi_val = float(rsi_series.iloc[-1]) if len(rsi_series) > 0 else None
             closes = df["close"].dropna().values
             if len(closes) >= 2:
                 return_1m = float((closes[-1] - closes[0]) / closes[0] * 100)
 
-        return _build_screener_row(ticker, quote, rsi, return_1m)
+        return _build_screener_row(ticker, quote, rsi_val, return_1m)
     except Exception:
         return None
 
@@ -74,9 +66,7 @@ async def screener(symbols: str):
 async def crypto_top():
     async def _fetch_crypto(symbol: str) -> dict | None:
         try:
-            results = await obb_get("equity/price/quote",
-                                    {"symbol": symbol, "provider": "yfinance"})
-            return results[0] if results else None
+            return await fetch_quote(symbol)
         except Exception:
             return None
 

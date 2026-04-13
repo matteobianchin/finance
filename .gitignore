@@ -1,9 +1,69 @@
+# ============================================================
+# Secrets & environment
+# ============================================================
 .env
+.env.local
+.env.*.local
+!.env.example
+backend/domain_api/.env
+frontend/.env.local
 backend/user_settings.json
+
+# ============================================================
+# Node / Next.js (frontend)
+# ============================================================
+node_modules/
+.next/
+out/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+frontend/next-env.d.ts
+
+# Testing
+coverage/
+playwright-report/
+test-results/
+frontend/e2e/.auth/
+
+# ============================================================
+# Python (backend)
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+htmlcov/
+.coverage
+
+# ============================================================
+# Docker
+# ============================================================
+# keep compose files tracked; ignore local overrides
+docker-compose.override.yml
+
+# ============================================================
+# OS / editor
+# ============================================================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+*.log
+
+# ============================================================
+# Claude Code / tooling
+# ============================================================
 .claude/
 .superpowers/
 superpowers/
-frontend/next-env.d.ts
-
-# Git worktrees
 .worktrees/

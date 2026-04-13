@@ -69,7 +69,7 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
   }, [symbol, timeframe]);
 
   useEffect(() => {
-    if (activeTab === "indicatori" && !signals) {
+    if (activeTab === "indicatori") {
       setTabLoading(true);
       getSignals(symbol, timeframe)
         .then(setSignals)
@@ -90,7 +90,7 @@ export default function EquityPage({ params }: { params: Promise<{ ticker: strin
         .catch(() => setNews([]))
         .finally(() => setTabLoading(false));
     }
-  }, [activeTab, symbol]);
+  }, [activeTab, symbol, timeframe]);
 
   return (
     <div className="space-y-4 max-w-4xl">

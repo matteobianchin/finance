@@ -112,17 +112,42 @@ export interface ApiError {
 
 // ── Signals (risposta /signals/{ticker}) ────────────────────────────────────
 
+export interface BandPoint {
+  date: string;
+  upper: number;
+  middle: number | null;
+  lower: number | null;
+  price: number;
+}
+
 export interface SignalsResult {
   dates: string[];
   closes: number[];
-  rsi: { date: string; value: number }[];
-  macd_hist: { date: string; value: number; macd: number | null; signal: number | null }[];
-  bbands: { date: string; upper: number; middle: number | null; lower: number | null; price: number }[];
-  atr: { date: string; value: number }[];
-  stoch: { date: string; k: number; d: number | null }[];
-  adx: { date: string; value: number }[];
-  obv: { date: string; value: number }[];
+  // Momentum
+  rsi:        { date: string; value: number }[];
+  macd_hist:  { date: string; value: number; macd: number | null; signal: number | null }[];
+  cci:        { date: string; value: number }[];
+  mfi:        { date: string; value: number }[];
+  roc:        { date: string; value: number }[];
+  stoch:      { date: string; k: number; d: number | null }[];
   williams_r: { date: string; value: number }[];
+  adx:        { date: string; value: number }[];
+  aroon:      { date: string; up: number; down: number | null }[];
+  // Volatility
+  atr:       { date: string; value: number }[];
+  bbands:    BandPoint[];
+  donchian:  BandPoint[];
+  keltner:   BandPoint[];
+  // Moving Averages
+  moving_averages: {
+    date: string; price: number;
+    sma20: number | null; sma50: number | null; sma200: number | null;
+    ema9: number | null; ema21: number | null; ema50: number | null; ema200: number | null;
+    vwap: number | null;
+  }[];
+  // Volume
+  obv: { date: string; value: number }[];
+  ad:  { date: string; value: number }[];
   last: {
     rsi: number | null;
     macd_hist: number | null;
@@ -131,28 +156,128 @@ export interface SignalsResult {
     atr: number | null;
     stoch_k: number | null;
     stoch_d: number | null;
+    cci: number | null;
+    mfi: number | null;
+    roc: number | null;
+    adx: number | null;
+    williams_r: number | null;
+    aroon_up: number | null;
+    aroon_down: number | null;
+    vwap: number | null;
     price: number | null;
   };
+}
+
+// ── Advanced (risposta /advanced/{ticker}) ────────────────────────────────────
+
+export interface RegimePoint {
+  date: string;
+  regime: "Bull" | "Bear" | "High-Vol" | "Neutral";
+  rolling_return: number;
+  rolling_vol: number;
+}
+
+export interface LinearChannelPoint {
+  date: string;
+  price: number;
+  mid: number;
+  upper: number;
+  lower: number;
+}
+
+export interface Pivots {
+  pp: number;
+  r1: number; r2: number; r3: number;
+  s1: number; s2: number; s3: number;
+}
+
+export interface AdvancedResult {
+  ticker: string;
+  timeframe: string;
+  // Mean reversion / regime
+  hurst: number;
+  ou_half_life: number | null;
+  adf_pvalue: number | null;
+  // Vol
+  gk_vol: number;
+  // Sizing
+  kelly: number;
+  // Regime
+  regime_series: RegimePoint[];
+  regime_summary: Record<string, number>;
+  // Trend
+  linear_channel: {
+    slope_annualized: number;
+    r_squared: number;
+    series: LinearChannelPoint[];
+  };
+  // Pivots
+  pivots: Pivots;
+}
+
+// ── Portfolio Optimization (risposta /portfolio/optimize) ─────────────────────
+
+export interface PortfolioAllocation {
+  weights: Record<string, number>;
+  expected_return: number;
+  volatility: number;
+  sharpe: number;
+}
+
+export interface EfficientFrontierPoint {
+  ret: number;
+  vol: number;
+}
+
+export interface PortfolioOptimizeResult {
+  tickers: string[];
+  timeframe: string;
+  max_sharpe: PortfolioAllocation;
+  min_variance: PortfolioAllocation;
+  risk_parity: PortfolioAllocation;
+  efficient_frontier: EfficientFrontierPoint[];
 }
 
 // ── Quant (risposta /quant/{ticker}) ────────────────────────────────────────
 
 export interface QuantResult {
   timeframe: string;
+  // Core risk-adjusted
   annualized_vol: number;
   sharpe: number;
   sortino: number;
   calmar: number;
+  omega_ratio: number;
+  ulcer_index: number;
+  // Tail risk
   var_95: number;
   var_99: number;
   cvar_95: number;
+  cvar_99: number;
+  tail_ratio: number;
+  // Distribution
   skewness: number;
   kurtosis: number;
+  jb_pvalue: number;
+  autocorr_lag1: number;
+  mad_vol: number;
+  // Trade statistics
+  win_rate: number;
+  payoff_ratio: number;
+  gain_to_pain: number;
+  // Drawdown
   max_drawdown: { value: number; duration_days: number };
+  recovery_days: number | null;
   drawdown_series: { date: string; value: number }[];
+  // Rolling windows
   rolling_vol: { date: string; value: number }[];
   rolling_sharpe: { date: string; value: number }[];
-  rolling_beta?: { date: string; value: number }[];
-  beta?: number;
   histogram: { x: number; count: number }[];
+  // Benchmark-dependent (optional)
+  beta?: number;
+  information_ratio?: number;
+  treynor?: number;
+  jensens_alpha?: number;
+  rolling_beta?: { date: string; value: number }[];
+  rolling_corr?: { date: string; value: number }[];
 }

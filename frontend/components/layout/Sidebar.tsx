@@ -2,20 +2,28 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart2, Globe, Briefcase, LayoutDashboard, Search, FlaskConical, Filter, Calendar } from "lucide-react";
+import { BarChart2, Globe, Briefcase, LayoutDashboard, Search, FlaskConical, Filter, Calendar, Activity, TrendingUp, AlertTriangle } from "lucide-react";
 import { clsx } from "clsx";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut";
+import { getHealth } from "@/lib/openbb";
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/screener", label: "Screener", icon: Filter },
   { href: "/analisi", label: "Analisi", icon: FlaskConical },
+  { href: "/advanced", label: "Avanzata", icon: Activity },
   { href: "/crypto", label: "Crypto", icon: BarChart2 },
   { href: "/macro", label: "Macro", icon: Globe },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
   { href: "/earnings", label: "Earnings", icon: Calendar },
 ];
+
+const PROVIDER_LABELS: Record<string, string> = {
+  fmp:    "FMP (fondamentali)",
+  tiingo: "Tiingo (news)",
+  fred:   "FRED (macro)",
+};
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -24,6 +32,19 @@ export default function Sidebar() {
   const searchRef = useRef<HTMLInputElement>(null);
   const focusSearch = useCallback(() => searchRef.current?.focus(), []);
   useKeyboardShortcut("/", focusSearch);
+
+  const [missingProviders, setMissingProviders] = useState<string[]>([]);
+  useEffect(() => {
+    getHealth()
+      .then(({ providers }) => {
+        setMissingProviders(
+          Object.entries(providers)
+            .filter(([, ok]) => !ok)
+            .map(([name]) => PROVIDER_LABELS[name] ?? name)
+        );
+      })
+      .catch(() => {}); // domain api non raggiungibile: non mostrare nulla
+  }, []);
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -36,8 +57,9 @@ export default function Sidebar() {
 
   return (
     <aside className="w-56 min-h-screen bg-card border-r border-border flex flex-col p-4 gap-1">
-      <div className="text-white font-bold text-lg mb-6 px-2">
-        📈 OpenBB
+      <div className="flex items-center gap-2 mb-6 px-2">
+        <TrendingUp size={18} className="text-accent flex-shrink-0" />
+        <span className="text-white font-bold text-lg">OpenBB</span>
       </div>
       {NAV.map(({ href, label, icon: Icon }) => {
         const isActive =

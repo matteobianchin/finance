@@ -1,7 +1,7 @@
 import type {
   PriceBar, Quote, SearchResult, IncomeStatement, KeyMetrics,
   NewsArticle, FredSeries, EarningsEvent, FundamentalsResult,
-  SignalsResult, QuantResult,
+  SignalsResult, QuantResult, AdvancedResult, PortfolioOptimizeResult,
 } from "@/types/openbb";
 
 // ── Base URL ─────────────────────────────────────────────────────────────────
@@ -143,6 +143,30 @@ export async function getQuant(
   benchmark: string = "SPY"
 ): Promise<QuantResult> {
   return domainFetch<QuantResult>(`quant/${ticker}`, { timeframe, benchmark });
+}
+
+export async function getAdvanced(
+  ticker: string,
+  timeframe: string = "1Y"
+): Promise<AdvancedResult> {
+  return domainFetch<AdvancedResult>(`advanced/${ticker}`, { timeframe });
+}
+
+export async function getHealth(): Promise<{
+  status: string;
+  providers: { fmp: boolean; tiingo: boolean; fred: boolean };
+}> {
+  return domainFetch("health");
+}
+
+export async function getPortfolioOptimize(
+  symbols: string[],
+  timeframe: string = "1Y"
+): Promise<PortfolioOptimizeResult> {
+  return domainFetch<PortfolioOptimizeResult>("portfolio/optimize", {
+    symbols: symbols.join(","),
+    timeframe,
+  });
 }
 
 export async function getScreenerData(

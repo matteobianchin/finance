@@ -203,12 +203,12 @@ Deploy su VPS con accesso via Tailscale, OpenBB come systemd service sempre atti
 # 0. Hetzner console: crea CX32 Ubuntu 24.04, aggiungi la tua chiave SSH pubblica
 #    poi connettiti come root:
 ssh root@<public-ip>
-bash <(curl -fsSL https://raw.githubusercontent.com/matteobianchin/OpenBB/main/scripts/first-login.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/matteobianchin/finance/main/scripts/first-login.sh)
 # → crea utente, copia chiavi, poi esci da root
 
 # 1. Login come utente appena creato
 ssh <username>@<public-ip>
-bash <(curl -fsSL https://raw.githubusercontent.com/matteobianchin/OpenBB/main/scripts/setup-vps.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/matteobianchin/finance/main/scripts/setup-vps.sh)
 
 # 2. Installa Tailscale
 curl -fsSL https://tailscale.com/install.sh | sh
@@ -223,7 +223,7 @@ bash scripts/install-openclaw.sh
 # → ssh user@<tailscale-ip> poi `claw` per entrare nel workspace
 
 # 5. Clone repo + .env
-git clone git@github.com:matteobianchin/OpenBB.git ~/OpenBB
+git clone git@github.com:matteobianchin/finance.git ~/OpenBB
 cp ~/OpenBB/.env.example ~/OpenBB/.env
 # Imposta FMP_API_KEY, TIINGO_API_KEY, FRED_API_KEY, ANTHROPIC_API_KEY
 

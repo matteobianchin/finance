@@ -10,7 +10,7 @@
 # Run this ONCE, as root, immediately after the VPS is created:
 #
 #   ssh root@<public-ip>
-#   curl -fsSL https://raw.githubusercontent.com/matteobianchin/OpenBB/main/scripts/first-login.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/matteobianchin/finance/main/scripts/first-login.sh | bash
 #
 # OR copy-paste it line by line from the Hetzner web console.
 #
@@ -90,6 +90,6 @@ printf '  1. Open a NEW terminal and verify login as %s:\n\n' "$NEW_USER"
 printf '       ssh %s@%s\n\n' "$NEW_USER" "$PUBLIC_IP"
 printf '  2. Once confirmed, log out as root.\n\n'
 printf '  3. As %s, run the base provisioning script:\n\n' "$NEW_USER"
-printf '       bash <(curl -fsSL https://raw.githubusercontent.com/matteobianchin/OpenBB/main/scripts/setup-vps.sh)\n\n'
+printf '       bash <(curl -fsSL https://raw.githubusercontent.com/matteobianchin/finance/main/scripts/setup-vps.sh)\n\n'
 printf '     OR after cloning the repo:\n\n'
 printf '       bash scripts/setup-vps.sh\n\n'

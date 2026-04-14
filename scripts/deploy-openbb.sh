@@ -68,7 +68,7 @@ fi
 if [[ -z "$REPO_PATH" || ! -f "$REPO_PATH/docker-compose.yml" ]]; then
     err "Could not find the OpenBB repo (looking for docker-compose.yml)."
     err "Pass the path explicitly: bash scripts/deploy-openbb.sh --repo /path/to/OpenBB"
-    err "Or clone the repo first: git clone git@github.com:matteobianchin/OpenBB.git ~/OpenBB"
+    err "Or clone the repo first: git clone git@github.com:matteobianchin/finance.git ~/OpenBB"
     exit 1
 fi
 REPO_PATH=$(realpath "$REPO_PATH")
@@ -152,7 +152,7 @@ SERVICE_FILE=/etc/systemd/system/openbb.service
 sudo tee "$SERVICE_FILE" >/dev/null <<EOF
 [Unit]
 Description=OpenBB Dashboard (frontend + domain-api)
-Documentation=https://github.com/matteobianchin/OpenBB
+Documentation=https://github.com/matteobianchin/finance
 After=docker.service network-online.target
 Requires=docker.service
 Wants=network-online.target

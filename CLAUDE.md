@@ -183,6 +183,62 @@ docker-compose up
 - Frontend: http://localhost:3000
 - Domain API: http://localhost:6901/docs
 
+### VPS (Hetzner CX32 / Ubuntu 24.04)
+
+Deploy su VPS con accesso via Tailscale, OpenBB come systemd service sempre attivo.
+
+**Script di provisioning** (in `scripts/`, da eseguire in ordine):
+
+| Script | Chi lo esegue | Cosa fa |
+|--------|--------------|---------|
+| `first-login.sh` | root | Crea utente sudo, copia SSH keys da root, blocca password root |
+| `setup-vps.sh` | utente sudo | Node 24, Python 3.12, Claude Code CLI, ufw, fail2ban, swap 4GB, tmux |
+| `harden-ssh.sh` | utente sudo | Chiude SSH pubblico, abilita solo accesso via tailnet, key-only auth |
+| `install-openclaw.sh` | utente sudo | Workspace Claude Code persistente via tmux + systemd user service + linger |
+| `deploy-openbb.sh` | utente sudo | Installa Docker CE, costruisce immagini, registra `openbb.service` (autostart al boot) |
+
+**Ordine di esecuzione:**
+
+```bash
+# 0. Hetzner console: crea CX32 Ubuntu 24.04, aggiungi la tua chiave SSH pubblica
+#    poi connettiti come root:
+ssh root@<public-ip>
+bash <(curl -fsSL https://raw.githubusercontent.com/matteobianchin/OpenBB/main/scripts/first-login.sh)
+# → crea utente, copia chiavi, poi esci da root
+
+# 1. Login come utente appena creato
+ssh <username>@<public-ip>
+bash <(curl -fsSL https://raw.githubusercontent.com/matteobianchin/OpenBB/main/scripts/setup-vps.sh)
+
+# 2. Installa Tailscale
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up   # autenticati nel browser
+
+# 3. Hardening SSH (con Tailscale già attivo — non invertire l'ordine)
+bash scripts/harden-ssh.sh
+# ⚠ Apri una seconda sessione SSH via tailnet PRIMA di riavviare sshd
+
+# 4. Workspace Claude Code sempre vivo
+bash scripts/install-openclaw.sh
+# → ssh user@<tailscale-ip> poi `claw` per entrare nel workspace
+
+# 5. Clone repo + .env
+git clone git@github.com:matteobianchin/OpenBB.git ~/OpenBB
+cp ~/OpenBB/.env.example ~/OpenBB/.env
+# Imposta FMP_API_KEY, TIINGO_API_KEY, FRED_API_KEY, ANTHROPIC_API_KEY
+
+# 6. Deploy applicazione
+cd ~/OpenBB
+bash scripts/deploy-openbb.sh
+# → Dashboard su http://<tailscale-ip>:3000
+```
+
+**Accesso remoto:**
+- Dashboard: `http://<tailscale-ip>:3000` (solo dalla tailnet, non esposto su internet)
+- SSH + Claude Code: `ssh user@<tailscale-ip>` poi `claw`
+- Gestione servizio: `sudo systemctl [status|stop|start|restart] openbb`
+- Log live: `journalctl -u openbb -f`
+
 ---
 
 ## Test

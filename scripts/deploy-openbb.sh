@@ -96,15 +96,13 @@ fi
 log "Adding $USER to docker group"
 if groups "$USER" | grep -q '\bdocker\b'; then
     skip "$USER already in docker group"
+    DOCKER_CMD="bash -c"
 else
     sudo usermod -aG docker "$USER"
     ok "$USER added to docker group (takes effect after re-login)"
     # Use sg to apply group for the rest of this script without re-login
     DOCKER_CMD="sg docker -c"
-else
-    DOCKER_CMD="bash -c"
 fi
-DOCKER_CMD="${DOCKER_CMD:-bash -c}"
 
 # ── 3. Validate .env files ───────────────────────────────────
 log "Checking .env files"
